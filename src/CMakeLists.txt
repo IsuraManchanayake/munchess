@@ -1,0 +1,1 @@
+include_directories(${chess_SOURCE_DIR}/include)
