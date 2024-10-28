@@ -13,4 +13,4 @@ add_executable(chess ${SOURCES}
         include/move.h
 )
 
-#set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG")
+set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG")
