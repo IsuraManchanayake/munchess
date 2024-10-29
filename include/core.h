@@ -3,6 +3,8 @@
 #define dtoc(d) ((char)((d) + '0'))
 #define ctod(c) ((c) - '0')
 
+#define op_color(c) ((Color)(~(c)))
+
 #define IDX(y, x) (((y) << 3) + (x))
 #define IDX_Y(idx) (((size_t)(idx)) >> 3)
 #define IDX_X(idx) ((idx) % 8)

@@ -8,9 +8,10 @@
 typedef struct Board {
     Piece pieces[64];
     DAi32 *moves;
-    bool has_king_moved[3];
-    bool has_king_rook_moved[3];
-    bool has_queen_rook_moved[3];
+    size_t first_king_move[2];
+    size_t first_king_rook_move[2];
+    size_t first_queen_rook_move[2];
+    size_t last_pawn_move[2];
 } Board;
 
 bool idx_is_safe(size_t idx) {
@@ -45,12 +46,14 @@ Board *board_create() {
         }
     }
     board->moves = dai32_create();
-    board->has_king_moved[WHITE] = false;
-    board->has_king_moved[BLACK] = false;
-    board->has_king_rook_moved[WHITE] = false;
-    board->has_king_rook_moved[BLACK] = false;
-    board->has_queen_rook_moved[WHITE] = false;
-    board->has_queen_rook_moved[BLACK] = false;
+    board->first_king_move[WHITE] = 0;
+    board->first_king_move[BLACK] = 0;
+    board->first_king_rook_move[WHITE] = 0;
+    board->first_king_rook_move[BLACK] = 0;
+    board->first_queen_rook_move[WHITE] = 0;
+    board->first_queen_rook_move[BLACK] = 0;
+    board->last_pawn_move[WHITE] = 0;
+    board->last_pawn_move[WHITE] = 0;
     return board;
 }
 
@@ -84,16 +87,20 @@ int move_direction(Color color) {
 }
 
 void apply_move(Board *board, Move move) {
+    size_t move_n = board->moves->size + 1;
     if(move_is_type_of(move, CASTLE)) {
         size_t rank = IDX_TO_RANK(move.from);
-        if (IDX_TO_FILE(move.to) == 'g') {
+        char file = IDX_TO_FILE(move.to);
+        if (file == 'g') {
             Piece rook = ATfr(board, 'h', rank);
             assert(rook.type == ROOK);
             ATfr(board, 'f', rank) = rook;
-        } else if (IDX_TO_FILE(move.to) == 'c') {
+        } else if (file == 'c') {
             Piece rook = ATfr(board, 'a', rank);
             assert(rook.type == ROOK);
             ATfr(board, 'd', rank) = rook;
+        } else {
+            assert(0);
         }
     } else if (move_is_type_of(move, PROMOTION)) {
         move.piece.type = move.promoted_type;
@@ -104,18 +111,72 @@ void apply_move(Board *board, Move move) {
         set_piece_null(&ATyx(board, to_y - dir, to_x));
     }
     set_piece_null(&ATidx(board, move.from));
-    ATidx(board, move.to) = move.piece;
-    dai32_push(board->moves, move.data);
-    if (move.piece.type == KING) {
-        board->has_king_moved[move.piece.color] = true;
+    Piece *piece_to = &ATidx(board, move.to);
+    piece_to->color = move.piece.color;
+    piece_to->type = move.piece.type;
+    if (move.piece.type == KING 
+        && board->first_king_move[move.piece.color] == 0) {
+        board->first_king_move[move.piece.color] = move_n;
     } else if (move.piece.type == ROOK) {
         size_t r = move.piece.color == WHITE ? 1 : 8;
-        if (!board->has_king_rook_moved[move.piece.color] && move.from == FR_TO_IDX('H', r)) {
-            board->has_king_rook_moved[move.piece.color] = true;
-        } else if(!board->has_queen_rook_moved[move.piece.color] && move.from == FR_TO_IDX('A', r)) {
-            board->has_queen_rook_moved[move.piece.color] = true;
+        if (board->first_king_rook_move[move.piece.color] == 0 
+            && move.from == FR_TO_IDX('H', r)) {
+            board->first_king_rook_move[move.piece.color] = move_n;
+        } else if (board->first_queen_rook_move[move.piece.color] == 0 
+            && move.from == FR_TO_IDX('A', r)) {
+            board->first_queen_rook_move[move.piece.color] = move_n;
+        }
+    } else if (move.piece.type == PAWN) {
+        board->last_pawn_move[move.piece.color] = move_n;
+    }
+    dai32_push(board->moves, move.data);
+}
+
+void undo_last_move(Board *board) {
+    size_t move_n = board->moves->size;
+    Move move = move_data_create(board->moves->data[move_n - 1]);
+    if (move_is_type_of(move, CASTLE)) {
+        size_t rank = IDX_TO_RANK(move.from);
+        char file = IDX_TO_FILE(move.to);
+        if (file == 'g') {
+            Piece rook = ATfr(board, 'f', rank);
+            assert(rook.type == ROOK);
+            ATfr(board, 'h', rank) = rook;
+        } else if (file == 'c') {
+            Piece rook = ATfr(board, 'd', rank);
+            assert(rook.type == ROOK);
+            ATfr(board, 'a', rank) = rook;
+        } else {
+            assert(0);
+        }
+    } else if (move_is_type_of(move, PROMOTION)) {
+        move.piece.type = PAWN;
+    } else if (move_is_type_of(move, EN_PASSANT)) {
+        int dir = move_direction(move.piece.color);
+        unsigned from_y = IDX_Y(move.from);
+        size_t to_y = IDX_Y(move.to);
+        size_t to_x = IDX_X(move.to);
+        ATyx(board, to_y - dir, to_x) = piece_create(op_color(move.piece.color), PAWN);
+    }
+    ATidx(board, move.from) = piece_create(move.piece.color, move.piece.type);
+    if (move_is_type_of(move, CAPTURE)) {
+        ATidx(board, move.to) = piece_create(op_color(move.piece.color), move.captured_type);
+    } else {
+        set_piece_null(&ATidx(board, move.to));
+    }
+    if (move.piece.type == KING) {
+        if (board->first_king_move[move.piece.color] == move_n) {
+            board->first_king_move[move.piece.color] = 0;
+        }
+    } else if (move.piece.type == ROOK) {
+        size_t r = move.piece.color == WHITE ? 1 : 8;
+        if (move.from == FR_TO_IDX('H', r) && board->first_king_rook_move[move.piece.color] == move_n) {
+            board->first_king_rook_move[move.piece.color] = 0;
+        } else if (move.from == FR_TO_IDX('A', r) && board->first_queen_rook_move[move.piece.color] == move_n) {
+            board->first_queen_rook_move[move.piece.color] = 0;
         }
     }
+    (void) dai32_pop(board->moves);
 }
 
 char *board_buf_write(Board *board, DA *da) {

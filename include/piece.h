@@ -59,12 +59,29 @@ char piece_type_repr(PieceType type) {
     return ' ';
 }
 
-char piece_repr(Piece piece) {
-    if (piece.type == NONE) {
+PieceType char_to_piece_type(char c) {
+    c = simple(c);
+    switch(c) {
+        case 'k': return KING;
+        case 'q': return QUEEN;
+        case 'r': return ROOK;
+        case 'b': return BISHOP;
+        case 'n': return KNIGHT;
+        case 'p': return PAWN;
+        default: return NONE;
+    }
+}
+
+char piece_repr_base(Color color, PieceType type) {
+    if (type == NONE) {
         return ' ';
     }
-    char res = piece_type_repr(piece.type);
-    return (res != ' ' && piece.color == WHITE) ? res ^ 32 : res;
+    char res = piece_type_repr(type);
+    return (res != ' ' && color == WHITE) ? res ^ 32 : res;
+}
+
+char piece_repr(Piece piece) {
+    return piece_repr_base(piece.color, piece.type);
 }
 
 // ===============================

@@ -384,8 +384,8 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
     }
     
     // Castle
-    if (!board->has_king_moved[piece.color]) {
-        if (!board->has_king_rook_moved[piece.color]) {
+    if (board->first_king_move[piece.color] > 0) {
+        if (board->first_king_rook_move[piece.color] > 0) {
             size_t sq_1 = YX_TO_IDX(y, x);
             size_t sq_2 = YX_TO_IDX(y, x + 1);
             size_t sq_3 = YX_TO_IDX(y, x + 2);
@@ -398,7 +398,7 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
                 dai32_push(moves, move.data);
             }
         }
-        if (!board->has_queen_rook_moved[piece.color]) {
+        if (board->first_queen_rook_move[piece.color] > 0) {
             size_t sq_1 = YX_TO_IDX(y, x);
             size_t sq_2 = YX_TO_IDX(y, x - 1);
             size_t sq_3 = YX_TO_IDX(y, x - 2);
@@ -434,37 +434,121 @@ void generate_moves(const Board *board, Color color, DAi32 *moves) {
     }
 }
 
-
-Move *notation_to_move(const char *notation, Board *board, Color color) {
-    // int is_king_castle = (strcmp("O-O", notation) == 0);
-    // int is_queen_castle = (strcmp("O-O-O", notation) == 0);
-    // if (is_king_castle || is_queen_castle) {
-    //     size_t from = FR_TO_IDX('e', color == WHITE ? 1 : 8);
-    //     size_t to = FR_TO_IDX(is_king_castle ? 'h' : 'a', color == WHITE ? 1 : 8);
-    //     Piece *king_piece = board->pieces[from];
-    //     if (king_piece.color != color || king_piece.type != KING) {
-    //         return NULL;
-    //     }
-    //     Move move = move_create(king_piece, from, to, CASTLE, NONE);
-    //     return move;
-    // }
-    
+Move notation_to_move(const char *notation, Board *board, Color color) {
     // TODO: Improve notation_to_move performance
     DAi32 *moves =  dai32_create();
     generate_moves(board, color, moves);
-    for (size_t i = 0; i < moves->size; ++i) {
-        Move move = move_data_create(moves->data[i]);
-        if (move.piece.color != color) {
-            continue;
-        }
-        const char *c = notation;
-        while (*c) {
-            switch(*c) {
-                case 'K': break;
+    const char *c = notation;
+    size_t len = strlen(c);
+    bool capture = false;
+    bool promotion = false;
+    PieceType promoted_type = NONE;
+    if (c[len - 1] == '+' || c[len - 1] == '#') {
+        --len;
+    }
+    if (len == 3 && strncmp(c, "O-O", len) == 0) {
+        for (size_t i = 0; i < moves->size; ++i) {
+            Move move = move_data_create(moves->data[i]);
+            if (move.piece.color == color
+                && move.piece.type == KING
+                && move_is_type_of(move, CASTLE)
+                && IDX_X(move.to) == 7) {
+                return move;
             }
         }
+        return (Move) {0};
+    } else if (len == 5 && strncmp(c, "O-O-O", len) == 0) {
+        for (size_t i = 0; i < moves->size; ++i) {
+            Move move = move_data_create(moves->data[i]);
+            if (move.piece.color == color
+                && move.piece.type == KING
+                && move_is_type_of(move, CASTLE)
+                && IDX_X(move.to) == 0) {
+                return move;
+            }
+        }
+        return (Move) {0};
     }
-    return NULL;
+    if (c[len - 2] == '=') {
+        promoted_type = char_to_piece_type(c[len - 1]);
+        len -= 2;
+    }
+    if (c[len - 3] == 'x') {
+        capture = true;
+    }
+    if (c[0] == 'K') {
+        char file = c[len - 2];
+        size_t rank = c[len - 1];
+        size_t dest = FR_TO_IDX(file, rank);
+        for (size_t i = 0; i < moves->size; ++i) {
+            Move move = move_data_create(moves->data[i]);
+            if (move.piece.color == color 
+                && move.piece.type == KING 
+                && move.to == dest) {
+                return move;
+            }
+        }
+        return (Move) {0};
+    } else if (c[0] == 'Q' || c[0] == 'R' || c[0] == 'B' || c[0] == 'N') {
+        PieceType piece_type = char_to_piece_type(c[0]);
+        size_t dest = COORD_TO_IDX(c + len - 2);
+        char rank_key = 0;
+        char file_key = 0;
+        if (len == 4) {
+            if (('a' <= c[1] && c[1] <= 'h') || ('A' <= c[1] && c[1] <= 'H')) {
+                file_key = c[1];
+            } else if (('1' <= c[1] && c[1] <= '8')) {
+                rank_key = c[1] - '0';
+            } else {
+                assert(0);
+            }
+            ++c;
+        } else if (len == 5) {
+            file_key = c[1];
+            rank_key = c[2] - '0';
+            c += 2;
+        } else if (len != 3) {
+            assert(0);
+        }
+        char dest_file = *(++c);
+        size_t dest_rank = *(++c) - '0';
+        size_t dest = FR_TO_IDX(dest_file, dest_rank);
+        for (size_t i = 0; i < moves->size; ++i) {
+            Move move = move_data_create(moves->data[i]);
+            if (move.piece.color != color) {
+                continue;
+            }
+            if (move.piece.type != piece_type) {
+                continue;
+            }
+            size_t from_file = IDX_TO_FILE(move.from);
+            size_t from_rank = IDX_TO_RANK(move.from);
+            if (move.to == dest 
+                && (!rank_key || (from_rank == rank_key)) 
+                && (!file_key || (from_file == file_key))) {
+                return move;
+            }
+        }
+        return (Move) {0};
+    } else if (('a' <= c[0] && c[0] <= 'h') ||('A' <= c[0] && c[0] <= 'H')) {
+        if (len == 2 || len == 4) { // e4 or exd4
+            char dest_file = c[len - 2];
+            size_t dest_rank = c[len - 1];
+            size_t dest = FR_TO_IDX(dest_file, dest_rank);
+            for (size_t i = 0; i < moves->size; ++i) {
+                Move move = move_data_create(moves->data[i]);
+                if (move.piece.color == color
+                    && move.piece.type ==  PAWN
+                    && move.to == dest) {
+                    return move;
+                }
+            }
+            return (Move) {0};
+        } else {
+            assert(0);
+        }
+    }
+    return (Move) {0};
 }
 
 // ==================================

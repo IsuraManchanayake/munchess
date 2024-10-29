@@ -18,10 +18,34 @@ typedef union Move {
         unsigned move_type_mask:4;
         unsigned from:6;
         unsigned to:6;
-        Piece piece;
+        PieceType captured_type:3;
+#ifdef _MSC_VER
+    #pragma pack(push, 1)
+#endif
+        struct {
+            Color color:1;
+            PieceType type:3;
+        }
+#ifdef __GNUC__
+    __attribute__((packed)) // For GCC and Clang
+#endif
+#ifdef _MSC_VER
+    #pragma pack(pop)
+#endif
+        piece;
     };
     uint32_t data;
 } Move;
+
+/*
+00000000000001111111111111111111
+00000000000001111111111111111000 - promoted_type
+00000000000001111111111110000000 - move_type_mask
+00000000000001111110000000000000 - from
+00000000000000000000000000000000 - to
+00000000000000000000000000000000 - piece.color
+00000000000000000000000000000000 - piece.type
+*/
 
 bool move_is_type_of(Move move, MoveType type) {
     return move.move_type_mask & type;
@@ -29,7 +53,7 @@ bool move_is_type_of(Move move, MoveType type) {
 
 Move move_create(Piece piece, unsigned from, unsigned to, unsigned move_type_mask, PieceType promoted_type) {
     return (Move) {
-        .piece=piece,
+        .piece={.color=piece.color, .type=piece.type},
         .move_type_mask=move_type_mask, 
         .from=from, 
         .to=to, 
@@ -49,7 +73,7 @@ typedef struct Board Board;
 
 char *move_buf_write(Move move, DA *da) {
     if (move_is_type_of(move, CASTLE)) {
-        buf_printf(da, "%c ", piece_repr(move.piece));
+        buf_printf(da, "%c ", piece_repr_base(move.piece.color, move.piece.type));
         volatile char f = IDX_TO_FILE(move.to);
         if (IDX_TO_FILE(move.to) == 'g') {
             buf_printf(da, "O-O");
@@ -61,7 +85,7 @@ char *move_buf_write(Move move, DA *da) {
     } else {
         const char from[3] = IDX_TO_COORD(move.from);
         const char to[3] = IDX_TO_COORD(move.to);
-        buf_printf(da, "%c ", piece_repr(move.piece));
+        buf_printf(da, "%c ", piece_repr_base(move.piece.color, move.piece.type));
         buf_printf(da, from);
         char mid = '-';
         if (move_is_type_of(move, CAPTURE)) {
@@ -83,8 +107,20 @@ char *move_buf_write(Move move, DA *da) {
 // ============================================
 
 void test_move_size() {
-    Piece piece = piece_create(WHITE, KING);
-    Move move = move_create(piece, COORD_TO_IDX("E1"), COORD_TO_IDX("G1"), CASTLE, NONE);
+    // Piece piece = piece_create(WHITE, KING);
+    // Move move = move_create(piece, COORD_TO_IDX("E1"), COORD_TO_IDX("G1"), CASTLE, NONE);
+    unsigned d = 0;
+    Move move = *(Move *)(&d);
+    // move.promoted_type = 7;
+    // move.move_type_mask = 15;
+    // move.from = 63;
+    // move.to = 63;
+    move.piece.color = 1;
+    move.piece.type = 7;
+    // move.piece.captured_type = 7;
+    debugzu((size_t)move.data);
+    debugzu(sizeof(move));
+    debugzu(sizeof(move.data));
     assert(sizeof(move) == sizeof(move.data));
 }
 

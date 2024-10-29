@@ -160,12 +160,12 @@ void dai32_free(DAi32 *da, bool free_data) {
 //     da->capacity = capacity;
 // }
 
-void da_grow(DA *da, size_t new_capacity) {
+void da_resize(DA *da, size_t new_capacity) {
     da->data = (void **) realloc(da->data, new_capacity * sizeof(void *));
     da->capacity = new_capacity;
 }
 
-void dai32_grow(DAi32 *da, size_t new_capacity) {
+void dai32_resize(DAi32 *da, size_t new_capacity) {
     da->data = (uint32_t*) realloc(da->data, new_capacity * sizeof(uint32_t));
     da->capacity = new_capacity;
 }
@@ -176,7 +176,7 @@ void da_push(DA *da, void *elem) {
         da->capacity = DA_INITIAL_CAPACITY;
     } else if (da->size == da->capacity) {
         size_t new_capacity = 2 * da->capacity;
-        da_grow(da, new_capacity);
+        da_resize(da, new_capacity);
     }
     da->data[da->size++] = elem;
 }
@@ -187,9 +187,29 @@ void dai32_push(DAi32 *da, uint32_t elem) {
         da->capacity = DA_INITIAL_CAPACITY;
     } else if (da->size == da->capacity) {
         size_t new_capacity = 2 * da->capacity;
-        dai32_grow(da, new_capacity);
+        dai32_resize(da, new_capacity);
     }
     da->data[da->size++] = elem;
+}
+
+void **da_pop(DA *da) {
+    if (da->size == 0) {
+        return NULL;
+    } else if (da->size < da->capacity / 4) {
+        size_t new_capacity = da->capacity / 4;
+        da_resize(da, new_capacity);
+    }
+    return &da->data[--da->size];
+}
+
+uint32_t *dai32_pop(DAi32 *da) {
+    if (da->size == 0) {
+        return NULL;
+    } else if (da->size < da->capacity / 4) {
+        size_t new_capacity = da->capacity / 4;
+        dai32_resize(da, new_capacity);
+    }
+    return &da->data[--da->size];
 }
 
 void **da_last_elem(DA *da) {
@@ -210,7 +230,7 @@ void _buf_printf(DA *da, const char* fmt, ...) {
     size_t curr = da->size;
     size_t new = curr + len;
     if (da->capacity < new) {
-        da_grow(da, new + 1);
+        da_resize(da, new + 1);
         *(da->data + new) = 0;
     }
 
