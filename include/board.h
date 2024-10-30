@@ -208,6 +208,14 @@ void undo_last_move(Board *board) {
     if (move.piece.type == KING) {
         if (board->first_king_move[move.piece.color] == move_n) {
             board->first_king_move[move.piece.color] = 0;
+            if (move_is_type_of(move, CASTLE)) {
+                char to_file = IDX_TO_FILE(move.to);
+                if (to_file == 'g') {
+                    board->first_king_rook_move[move.piece.color] = 0;
+                } else if (to_file == 'c') {
+                    board->first_queen_rook_move[move.piece.color] = 0;
+                }
+            }
         }
     } else if (move.piece.type == ROOK) {
         size_t r = move.piece.color == WHITE ? 1 : 8;

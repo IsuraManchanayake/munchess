@@ -663,11 +663,23 @@ void test_notation_to_move(void) {
         // da_free(da_2);
         // da_free(da_3);
     }
-    DA *da = da_create();
-    char *fen = board_to_fen(board, da);
-    const char *expected = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 w -kq - 6 5";
-    assert(strcmp(fen, expected) == 0);
-    da_free(da);
+    DA *da_1 = da_create();
+    char *fen_1 = board_to_fen(board, da_1);
+    const char *expected_1 = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 w -kq - 6 5";
+    assert(strcmp(fen_1, expected_1) == 0);
+    da_free(da_1);
+
+
+    for (size_t i = 0; i < sizeof(moves) / sizeof(moves[0]); ++i) {
+        undo_last_move(board);
+    }
+
+    DA *da_2 = da_create();
+    char *fen_2 = board_to_fen(board, da_2);
+    // debugs(fen_2);
+    const char *expected_2 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    assert(strcmp(fen_2, expected_2) == 0);
+    da_free(da_2);
 }
 
 void test_generate(void) {
