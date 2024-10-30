@@ -238,7 +238,7 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
     size_t y = IDX_Y(idx);
     size_t x = IDX_X(idx);
 
-    bool attacked[64] = {0};
+    uint16_t attacked[64] = {0};
     size_t dir = move_direction(piece.color);
     for (size_t i = 0; i < 64; ++i) {
         if (is_piece_null(board->pieces[i])
@@ -250,13 +250,13 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
         int y = IDX_Y(i);
         // Pawns
         if (board->pieces[i].type == PAWN) {
-            size_t dest_1 = YX_TO_IDX(x + 1, y - dir);
-            if (yx_is_safe(x + 1, y - dir)) {
-                attacked[dest_1] = true;
+            size_t dest_1 = YX_TO_IDX(y - dir, x + 1);
+            if (yx_is_safe(y - dir, x + 1)) {
+                attacked[dest_1] = i << 8 | board->pieces[i].data;
             }
-            size_t dest_2 = YX_TO_IDX(x - 1, y - dir);
-            if (yx_is_safe(x + 1, y - dir)) {
-                attacked[dest_2] = true;
+            size_t dest_2 = YX_TO_IDX(y - dir, x - 1);
+            if (yx_is_safe(y - dir, x + 1)) {
+                attacked[dest_2] = i << 8 | board->pieces[i].data;
             }
         } else if (board->pieces[i].type == BISHOP
             || board->pieces[i].type == ROOK
@@ -295,16 +295,16 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
             for (size_t j = start_dir_idx; j < end_dir_idx; ++j) {
                 int dir_x = dirs[j][0];
                 int dir_y = dirs[j][1];
-                for (size_t k = 0; k < 8; ++k) {
+                for (size_t k = 1; k < 8; ++k) {
                     size_t dest = YX_TO_IDX(y + k * dir_y, x + k * dir_x);
                     if (!yx_is_safe(y + k * dir_y, x + k * dir_x)) {
                         break;
                     }
                     if (is_piece_null(board->pieces[dest])) {
-                        attacked[dest] = true;
+                        attacked[dest] = i << 8 | board->pieces[i].data;
                     } else {
                         // if (board->pieces[dest].color != piece.color) {
-                            attacked[dest] = true;
+                            attacked[dest] = i << 8 | board->pieces[i].data;
                         // }
                         break;
                     }
@@ -326,7 +326,7 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
                 int dir_y = dirs[j][1];
                 size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
                 if (yx_is_safe(y + dir_y, x + dir_x)) {
-                    attacked[dest] = true;
+                    attacked[dest] = i << 8 | board->pieces[i].data;
                 }
             }
         } else if (board->pieces[i].type == KING) {
@@ -345,7 +345,7 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
                 int dir_y = dirs[j][1];
                 size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
                 if (yx_is_safe(y + dir_y, x + dir_x)) {
-                    attacked[dest] = true;
+                    attacked[dest] = i << 8 | board->pieces[i].data;
                 }
             }
         } else {
@@ -382,10 +382,26 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
             break;
         }
     }
+
+    // if (board->moves->size == 6) {
+    //     DA *da = da_create();
+    //     for(size_t i = 0; i < 64; ++i) {
+    //         const char pos[] = IDX_TO_COORD(i);
+    //         Piece attacking_piece = piece_data_create(attacked[i] & 0xff);
+    //         const char from[] = IDX_TO_COORD(attacked[i] >> 8);
+    //         if (!is_piece_null(attacking_piece)) {
+    //             buf_printf(da, "%s %s %c\n", pos, from, piece_repr(attacking_piece));
+    //         } else {
+    //             buf_printf(da, "%s [SAFE]\n", pos);
+    //         }
+    //     }
+    //     printf("%s", (char *) da->data);
+    //     da_free(da);
+    // }
     
     // Castle
-    if (board->first_king_move[piece.color] > 0) {
-        if (board->first_king_rook_move[piece.color] > 0) {
+    if (board->first_king_move[piece.color] == 0) {
+        if (board->first_king_rook_move[piece.color] == 0) {
             size_t sq_1 = YX_TO_IDX(y, x);
             size_t sq_2 = YX_TO_IDX(y, x + 1);
             size_t sq_3 = YX_TO_IDX(y, x + 2);
@@ -398,7 +414,7 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
                 dai32_push(moves, move.data);
             }
         }
-        if (board->first_queen_rook_move[piece.color] > 0) {
+        if (board->first_queen_rook_move[piece.color] == 0) {
             size_t sq_1 = YX_TO_IDX(y, x);
             size_t sq_2 = YX_TO_IDX(y, x - 1);
             size_t sq_3 = YX_TO_IDX(y, x - 2);
@@ -434,9 +450,11 @@ void generate_moves(const Board *board, Color color, DAi32 *moves) {
     }
 }
 
-Move notation_to_move(const char *notation, Board *board, Color color) {
+Move notation_to_move(const char *notation, Board *board) {
     // TODO: Improve notation_to_move performance
     DAi32 *moves =  dai32_create();
+    Move rmove = (Move) {0};
+    Color color = board->to_move;
     generate_moves(board, color, moves);
     const char *c = notation;
     size_t len = strlen(c);
@@ -452,28 +470,30 @@ Move notation_to_move(const char *notation, Board *board, Color color) {
             if (move.piece.color == color
                 && move.piece.type == KING
                 && move_is_type_of(move, CASTLE)
-                && IDX_X(move.to) == 7) {
-                return move;
+                && IDX_X(move.to) == 6) {
+                rmove = move;
+                goto finalize;
             }
         }
-        return (Move) {0};
+        goto finalize;
     } else if (len == 5 && strncmp(c, "O-O-O", len) == 0) {
         for (size_t i = 0; i < moves->size; ++i) {
             Move move = move_data_create(moves->data[i]);
             if (move.piece.color == color
                 && move.piece.type == KING
                 && move_is_type_of(move, CASTLE)
-                && IDX_X(move.to) == 0) {
-                return move;
+                && IDX_X(move.to) == 2) {
+                rmove = move;
+                goto finalize;
             }
         }
-        return (Move) {0};
+        goto finalize;
     }
-    if (c[len - 2] == '=') {
+    if (len >= 2 && c[len - 2] == '=') {
         promoted_type = char_to_piece_type(c[len - 1]);
         len -= 2;
     }
-    if (c[len - 3] == 'x') {
+    if (len >= 3 && c[len - 3] == 'x') {
         capture = true;
     }
     if (c[0] == 'K') {
@@ -485,10 +505,11 @@ Move notation_to_move(const char *notation, Board *board, Color color) {
             if (move.piece.color == color 
                 && move.piece.type == KING 
                 && move.to == dest) {
-                return move;
+                rmove = move;
+                goto finalize;
             }
         }
-        return (Move) {0};
+        goto finalize;
     } else if (c[0] == 'Q' || c[0] == 'R' || c[0] == 'B' || c[0] == 'N') {
         PieceType piece_type = char_to_piece_type(c[0]);
         size_t dest = COORD_TO_IDX(c + len - 2);
@@ -510,9 +531,9 @@ Move notation_to_move(const char *notation, Board *board, Color color) {
         } else if (len != 3) {
             assert(0);
         }
-        char dest_file = *(++c);
-        size_t dest_rank = *(++c) - '0';
-        size_t dest = FR_TO_IDX(dest_file, dest_rank);
+        // char dest_file = *(++c);
+        // size_t dest_rank = *(++c) - '0';
+        // size_t dest = FR_TO_IDX(dest_file, dest_rank);
         for (size_t i = 0; i < moves->size; ++i) {
             Move move = move_data_create(moves->data[i]);
             if (move.piece.color != color) {
@@ -521,39 +542,46 @@ Move notation_to_move(const char *notation, Board *board, Color color) {
             if (move.piece.type != piece_type) {
                 continue;
             }
-            size_t from_file = IDX_TO_FILE(move.from);
-            size_t from_rank = IDX_TO_RANK(move.from);
+            char from_file = IDX_TO_FILE(move.from);
+            char from_rank = IDX_TO_RANK(move.from);
             if (move.to == dest 
                 && (!rank_key || (from_rank == rank_key)) 
                 && (!file_key || (from_file == file_key))) {
-                return move;
+                rmove = move;
+                goto finalize;
             }
         }
         return (Move) {0};
     } else if (('a' <= c[0] && c[0] <= 'h') ||('A' <= c[0] && c[0] <= 'H')) {
         if (len == 2 || len == 4) { // e4 or exd4
             char dest_file = c[len - 2];
-            size_t dest_rank = c[len - 1];
+            size_t dest_rank = c[len - 1] - '0';
             size_t dest = FR_TO_IDX(dest_file, dest_rank);
             for (size_t i = 0; i < moves->size; ++i) {
                 Move move = move_data_create(moves->data[i]);
                 if (move.piece.color == color
                     && move.piece.type ==  PAWN
                     && move.to == dest) {
-                    return move;
+                    rmove = move;
+                    goto finalize;
                 }
             }
-            return (Move) {0};
+            goto finalize;
         } else {
             assert(0);
         }
     }
-    return (Move) {0};
+    (void) capture;
+    (void) promotion;
+    (void) promoted_type;
+    finalize:
+    dai32_free(moves);
+    return rmove;
 }
 
 // ==================================
 
-void test_generate_initial_moves() {
+void test_generate_initial_moves(void) {
     Board *board = board_create();
     place_initial_pieces(board);
     Move move_1 = move_create(ATcoord(board, "E2"), COORD_TO_IDX("E2"), COORD_TO_IDX("E4"), NORMAL, NONE);
@@ -566,21 +594,83 @@ void test_generate_initial_moves() {
     apply_move(board, move_4);
     DAi32 *moves = dai32_create();
     generate_moves(board, WHITE, moves);
-    debugzu(moves->size);
-    for (size_t i = 0; i < moves->size; ++i) {
-        DA *da = da_create();
-        move_buf_write(move_data_create(moves->data[i]), da);
-        printf("%zu. %s\n", i, (char *) da->data);
-        // debugs((char *)da->data);
-    }
+    assert(moves->size == 26);
+    // debugzu(moves->size);
+    // for (size_t i = 0; i < moves->size; ++i) {
+    //     DA *da = da_create();
+    //     move_buf_write(move_data_create(moves->data[i]), da);
+    //     printf("%zu. %s\n", i, (char *) da->data);
+    //     // debugs((char *)da->data);
+    // }
     // Move move_5 = move_data_create(moves->data[23]);
     // apply_move(board, move_5);
 
     DA *da = da_create();
     char *repr = board_buf_write(board, da);
-    printf("%s\n", repr);
+    char *expected = 
+"   +---+---+---+---+---+---+---+---+\n"
+" 8 | r |   | b | q | k | b | n | r |\n"
+"   +---+---+---+---+---+---+---+---+\n"
+" 7 | p | p | p | p |   | p | p | p |\n"
+"   +---+---+---+---+---+---+---+---+\n"
+" 6 |   |   | n |   |   |   |   |   |\n"
+"   +---+---+---+---+---+---+---+---+\n"
+" 5 |   |   |   |   | p |   |   |   |\n"
+"   +---+---+---+---+---+---+---+---+\n"
+" 4 |   |   |   |   | P |   |   |   |\n"
+"   +---+---+---+---+---+---+---+---+\n"
+" 3 |   |   |   |   |   | N |   |   |\n"
+"   +---+---+---+---+---+---+---+---+\n"
+" 2 | P | P | P | P |   | P | P | P |\n"
+"   +---+---+---+---+---+---+---+---+\n"
+" 1 | R | N | B | Q | K | B |   | R |\n"
+"   +---+---+---+---+---+---+---+---+\n"
+"     a   b   c   d   e   f   g   h  \n"
+"                                    ";
+    // printf("%s\n", repr);
+    assert(strcmp(repr, expected) == 0);
 }
 
-void test_generate() {
+void test_notation_to_move(void) {
+    Board *board = board_create();
+    place_initial_pieces(board);
+
+    const char *moves[] = {
+        "e4", "e5",
+        "Nf3", "Nc6",
+        "Bc4", "Bc5",
+        "O-O", "Nf6",
+    };
+    for (size_t i = 0; i < sizeof(moves) / sizeof(moves[0]); ++i) {
+        Move move = notation_to_move(moves[i], board);
+        assert(!is_move_null(move));
+        apply_move(board, move);
+
+        // DA *da_1 = da_create();
+        // char *repr = move_buf_write(move, da_1);
+
+        // DA *da_2 = da_create();
+        // char *fen = board_to_fen(board, da_2);
+
+        // DA *da_3 = da_create();
+        // // char *board_buf = board_buf_write(board, da_3);
+
+        // debugs(repr);
+        // debugs(fen);
+        // // printf("%s\n", board_buf);
+
+        // da_free(da_1);
+        // da_free(da_2);
+        // da_free(da_3);
+    }
+    DA *da = da_create();
+    char *fen = board_to_fen(board, da);
+    const char *expected = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 w -kq - 6 5";
+    assert(strcmp(fen, expected) == 0);
+    da_free(da);
+}
+
+void test_generate(void) {
     test_wrapper(test_generate_initial_moves);
+    test_wrapper(test_notation_to_move);
 }

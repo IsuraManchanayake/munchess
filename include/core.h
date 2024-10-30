@@ -3,7 +3,7 @@
 #define dtoc(d) ((char)((d) + '0'))
 #define ctod(c) ((c) - '0')
 
-#define op_color(c) ((Color)(~(c)))
+#define op_color(c) ((Color)(1 - (c)))
 
 #define IDX(y, x) (((y) << 3) + (x))
 #define IDX_Y(idx) (((size_t)(idx)) >> 3)
@@ -24,8 +24,8 @@
 #define COORD_TO_YX(coord) {(coord)[1] - '1', simple((coord)[0]) - 'a'}
 #define COORD_TO_FR(coord) {simple((coord)[0]), (coord)[1] - '1'}
 #define YX_TO_IDX(y, x) (IDX(y, x))
-#define YX_TO_COORD(y, x) {y + 'a', x + '1', 0}
-#define YX_TO_FR(y, x) {y + 'a',x + 1}
+#define YX_TO_COORD(y, x) {x + 'a', y + '1', 0}
+#define YX_TO_FR(y, x) {x + 'a',y + 1}
 #define FR_TO_IDX(f, r) IDX(r - 1, simple(f) - 'a')
 #define FR_TO_COORD(f, r) {f, dtoc(r), 0}
 #define FR_TO_YX(f, r) {r - 1, simple(f) - 'a'}

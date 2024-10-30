@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 
-void test() {
+void test(void) {
     test_wrapper(test_common);
     test_wrapper(test_piece);
     test_wrapper(test_board);

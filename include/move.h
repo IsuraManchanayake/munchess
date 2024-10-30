@@ -37,16 +37,6 @@ typedef union Move {
     uint32_t data;
 } Move;
 
-/*
-00000000000001111111111111111111
-00000000000001111111111111111000 - promoted_type
-00000000000001111111111110000000 - move_type_mask
-00000000000001111110000000000000 - from
-00000000000000000000000000000000 - to
-00000000000000000000000000000000 - piece.color
-00000000000000000000000000000000 - piece.type
-*/
-
 bool move_is_type_of(Move move, MoveType type) {
     return move.move_type_mask & type;
 }
@@ -72,13 +62,17 @@ bool is_move_null(Move move) {
 typedef struct Board Board;
 
 char *move_buf_write(Move move, DA *da) {
+    if (is_move_null(move)) {
+        buf_printf(da, "[NULL MOVE]", 0);
+        return (char *) da->data;
+    }
     if (move_is_type_of(move, CASTLE)) {
         buf_printf(da, "%c ", piece_repr_base(move.piece.color, move.piece.type));
-        volatile char f = IDX_TO_FILE(move.to);
-        if (IDX_TO_FILE(move.to) == 'g') {
-            buf_printf(da, "O-O");
-        } else if (IDX_TO_FILE(move.to) == 'c') {
-            buf_printf(da, "O-O-O");
+        volatile char to_file = IDX_TO_FILE(move.to);
+        if (to_file == 'g') {
+            buf_printf(da, "O-O", 0);
+        } else if (to_file == 'c') {
+            buf_printf(da, "O-O-O", 0);
         } else {
             assert(0);
         }
@@ -86,7 +80,7 @@ char *move_buf_write(Move move, DA *da) {
         const char from[3] = IDX_TO_COORD(move.from);
         const char to[3] = IDX_TO_COORD(move.to);
         buf_printf(da, "%c ", piece_repr_base(move.piece.color, move.piece.type));
-        buf_printf(da, from);
+        buf_printf(da, "%s", from);
         char mid = '-';
         if (move_is_type_of(move, CAPTURE)) {
             mid = 'x';
@@ -94,7 +88,7 @@ char *move_buf_write(Move move, DA *da) {
             mid = 'e';
         }
         buf_printf(da, "%c", mid);
-        buf_printf(da, to);
+        buf_printf(da, "%s", to);
         if (move_is_type_of(move, PROMOTION)) {
             char promoted = piece_type_repr(move.promoted_type);
             promoted = move.piece.color == WHITE ? promoted ^ 32 : promoted;
@@ -106,25 +100,24 @@ char *move_buf_write(Move move, DA *da) {
 
 // ============================================
 
-void test_move_size() {
-    // Piece piece = piece_create(WHITE, KING);
-    // Move move = move_create(piece, COORD_TO_IDX("E1"), COORD_TO_IDX("G1"), CASTLE, NONE);
-    unsigned d = 0;
-    Move move = *(Move *)(&d);
-    // move.promoted_type = 7;
-    // move.move_type_mask = 15;
-    // move.from = 63;
-    // move.to = 63;
+void test_move_size(void) {
+    Move move = (Move) {0};
+    move.promoted_type = 7;
+    move.move_type_mask = 15;
+    move.from = 63;
+    move.to = 63;
+    move.captured_type = 7;
     move.piece.color = 1;
     move.piece.type = 7;
-    // move.piece.captured_type = 7;
-    debugzu((size_t)move.data);
-    debugzu(sizeof(move));
-    debugzu(sizeof(move.data));
+    // debugzu((size_t)move.data);
+    // 00001111 00111111 11111111 11111111
+
+    // debugzu(sizeof(move));
+    // debugzu(sizeof(move.data));
     assert(sizeof(move) == sizeof(move.data));
 }
 
-void test_move_create() {
+void test_move_create(void) {
     Piece piece = piece_create(WHITE, KING);
     Move move = move_create(piece, COORD_TO_IDX("E1"), COORD_TO_IDX("G1"), CASTLE, NONE);
     assert(move.from == 4);
@@ -135,7 +128,7 @@ void test_move_create() {
     assert(move.piece.type == KING);
 }
 
-void test_move_data_create() {
+void test_move_data_create(void) {
     Piece piece = piece_create(BLACK, KING);
     Move move = move_create(piece, COORD_TO_IDX("E8"), COORD_TO_IDX("G8"), CASTLE, NONE);
     Move copied_move = move_data_create(move.data);
@@ -145,7 +138,7 @@ void test_move_data_create() {
     assert(copied_move.piece.type == KING);
 }
 
-void test_move_buf_write() {
+void test_move_buf_write(void) {
     Piece piece_1 = piece_create(WHITE, KING);
     Piece piece_2 = piece_create(BLACK, QUEEN);
     Piece piece_3 = piece_create(WHITE, PAWN);
@@ -169,13 +162,13 @@ void test_move_buf_write() {
     // debugs(move_2_str);
     // debugs(move_3_str);
     // debugs(move_4_str);
-    // da_free(da_1, true);
-    // da_free(da_2, true);
-    // da_free(da_3, true);
-    // da_free(da_4, true);
+    da_free(da_1);
+    da_free(da_2);
+    da_free(da_3);
+    da_free(da_4);
 }
 
-void test_move() {
+void test_move(void) {
     test_wrapper(test_move_size);
     test_wrapper(test_move_create);
     test_wrapper(test_move_data_create);

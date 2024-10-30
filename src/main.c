@@ -1,7 +1,7 @@
 #include "tests.h"
 
 
-int main() {
+int main(void) {
     test();
     return 0;
 }

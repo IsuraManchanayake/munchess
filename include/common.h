@@ -47,7 +47,7 @@ void region_free(Region *region) {
     free(region->data);
 }
 
-Arena *arena_create() {
+Arena *arena_create(void) {
     Arena *arena = (Arena *) malloc(sizeof(Arena));
     arena->begin = NULL;
     arena->end = NULL;
@@ -141,18 +141,18 @@ DAi32 *dai32_create(void) {
 //     da->size = 0;
 // }
 
-void da_free(DA *da, bool free_data) {
-    if (da->data && free_data) {
+void da_free(DA *da) {
+    if (da->data) {
         free(da->data);
     }
-    free(da);
+    // free(da);
 }
 
-void dai32_free(DAi32 *da, bool free_data) {
-    if (da->data && free_data) {
+void dai32_free(DAi32 *da) {
+    if (da->data) {
         free(da->data);
     }
-    free(da);
+    // free(da);
 }
 
 // void da_alloc(DA *da, size_t capacity) {
@@ -242,12 +242,12 @@ void _buf_printf(DA *da, const char* fmt, ...) {
 
 #define buf_printf(da, fmt, ...) \
     do { \
-        _buf_printf((da), (fmt), ##__VA_ARGS__); \
+        _buf_printf((da), (fmt), __VA_ARGS__); \
     } while(0)
 
 // ======================================
 
-void test_da() {
+void test_da(void) {
     DA *da = da_create();
     for(size_t i = 0; i < 10; ++i) {
         int *v = (int *) malloc(sizeof(int));
@@ -255,20 +255,20 @@ void test_da() {
         da_push(da, v);
         assert(da->capacity >= da->size);
         assert(da->size = (i + 1));
-        assert(*(int *)*da_last_elem(da) == i);
+        assert(*(int *)*da_last_elem(da) == (int) i);
         // printf("Capacity: %zu ", da->capacity);
         // printf("Size: %zu ", da->size);
         // printf("Last element: %d\n", *(int *)da_last_elem(da));
     }
     for(size_t i = 0; i < 10; ++i) {
         int value = *(int *)(da->data[i]);
-        assert(value == i);
+        assert(value == (int) i);
         // printf("Value at index %zu is %d\n", i, value);
     }
-    // da_free(da, true);
+    da_free(da);
 }
 
-void test_basic_allocation() {
+void test_basic_allocation(void) {
     arena_reset(&arena);
     void *block1 = arena_allocate(&arena, 64);
     void *block2 = arena_allocate(&arena, 32);
@@ -277,14 +277,14 @@ void test_basic_allocation() {
     assert(block1 != block2);
 }
 
-void test_allocation_over_region_size() {
+void test_allocation_over_region_size(void) {
     arena_reset(&arena);
     void *block1 = arena_allocate(&arena, 200);
     assert(block1 != NULL);
 }
 
 
-void test_multiple_regions() {
+void test_multiple_regions(void) {
     arena_reset(&arena);
     void *block1 = arena_allocate(&arena, 64);  // Fits in one region
     void *block2 = arena_allocate(&arena, 80);  // New region should be created
@@ -293,7 +293,7 @@ void test_multiple_regions() {
     assert(block1 != block2);
 }
 
-void test_region_capacity_boundary() {
+void test_region_capacity_boundary(void) {
     arena_reset(&arena);
     void *block1 = arena_allocate(&arena, REGION_SIZE);  // Should exactly fit one region
     void *block2 = arena_allocate(&arena, 1);  // Should cause a new region allocation
@@ -308,32 +308,34 @@ void test_region_capacity_boundary() {
     // arena_free(arena);
 }
 
-void test_arena_small_size_allocs() {
+void test_arena_small_size_allocs(void) {
     arena_reset(&arena);
     size_t block1_size = sizeof(int);
     size_t block2_size = sizeof(double);
     void *block0 = arena_allocate(&arena, REGION_SIZE);
     void *block1 = arena_allocate(&arena, block1_size);
     void *block2 = arena_allocate(&arena, block2_size);
+    (void) block0;
     assert(block1 != NULL);
     assert(block2 != NULL);
     assert(block1 != block2);
-    assert((char *)block2 - (char *)block1 == block1_size);
+    assert((char *)block2 - (char *)block1 == (long) block1_size);
     Region *last_region = (Region *) arena.end;
     assert(block1 == last_region->data);
     assert(block1_size + block2_size == last_region->size);
 }
 
-void test_buf_printf() {
+void test_buf_printf(void) {
     DA *da = da_create();
     buf_printf(da, "hello %s %zu\n", "there", 23ULL);
     buf_printf(da, "mr. %s\n", "ben");
     char *str = "hello there 23\nmr. ben\n";
     assert(strcmp(str, (char *) da->data) == 0);
 //    printf("%s", (char *)da->data);
+    da_free(da);
 }
 
-void test_common() {
+void test_common(void) {
     test_wrapper(test_da);
     test_wrapper(test_basic_allocation);
     test_wrapper(test_allocation_over_region_size);
