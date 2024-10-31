@@ -162,6 +162,7 @@ void apply_move(Board *board, Move move) {
 void undo_last_move(Board *board) {
     size_t move_n = board->moves->size;
     Move move = move_data_create(board->moves->data[move_n - 1]);
+    Color color = move.piece.color;
     if (move_is_type_of(move, CASTLE)) {
         size_t rank = IDX_TO_RANK(move.from);
         char file = IDX_TO_FILE(move.to);
@@ -181,65 +182,65 @@ void undo_last_move(Board *board) {
     } else if (move_is_type_of(move, PROMOTION)) {
         move.piece.type = PAWN;
     } else if (move_is_type_of(move, EN_PASSANT)) {
-        int dir = move_direction(move.piece.color);
+        int dir = move_direction(color);
         // unsigned from_y = IDX_Y(move.from);
         size_t to_y = IDX_Y(move.to);
         size_t to_x = IDX_X(move.to);
-        ATyx(board, to_y - dir, to_x) = piece_create(op_color(move.piece.color), PAWN);
+        ATyx(board, to_y - dir, to_x) = piece_create(op_color(color), PAWN);
     }
-    ATidx(board, move.from) = piece_create(move.piece.color, move.piece.type);
+    ATidx(board, move.from) = piece_create(color, move.piece.type);
     if (move_is_type_of(move, CAPTURE)) {
-        ATidx(board, move.to) = piece_create(op_color(move.piece.color), move.captured_type);
+        ATidx(board, move.to) = piece_create(op_color(color), move.captured_type);
         bool found = false;
         for (size_t i = board->moves->size - 1; i-- > 0;) {
             Move tmove = move_data_create(board->moves->data[i]);
-            if (tmove.piece.color == move.piece.color && move_is_type_of(tmove, CAPTURE)) {
+            if (tmove.piece.color == color && move_is_type_of(tmove, CAPTURE)) {
                 found = true;
-                board->last_capture_move[move.piece.color] = i;
+                board->last_capture_move[color] = i;
                 break;
             }
         }
         if (!found) {
-            board->last_capture_move[move.piece.color] = 0;
+            board->last_capture_move[color] = 0;
         }
     } else {
         set_piece_null(&ATidx(board, move.to));
     }
     if (move.piece.type == KING) {
-        if (board->first_king_move[move.piece.color] == move_n) {
-            board->first_king_move[move.piece.color] = 0;
+        if (board->first_king_move[color] == move_n) {
+            board->first_king_move[color] = 0;
             if (move_is_type_of(move, CASTLE)) {
                 char to_file = IDX_TO_FILE(move.to);
                 if (to_file == 'g') {
-                    board->first_king_rook_move[move.piece.color] = 0;
+                    board->first_king_rook_move[color] = 0;
                 } else if (to_file == 'c') {
-                    board->first_queen_rook_move[move.piece.color] = 0;
+                    board->first_queen_rook_move[color] = 0;
                 }
             }
         }
     } else if (move.piece.type == ROOK) {
-        size_t r = move.piece.color == WHITE ? 1 : 8;
-        if (move.from == FR_TO_IDX('H', r) && board->first_king_rook_move[move.piece.color] == move_n) {
-            board->first_king_rook_move[move.piece.color] = 0;
-        } else if (move.from == FR_TO_IDX('A', r) && board->first_queen_rook_move[move.piece.color] == move_n) {
-            board->first_queen_rook_move[move.piece.color] = 0;
+        size_t r = color == WHITE ? 1 : 8;
+        if (move.from == FR_TO_IDX('H', r) && board->first_king_rook_move[color] == move_n) {
+            board->first_king_rook_move[color] = 0;
+        } else if (move.from == FR_TO_IDX('A', r) && board->first_queen_rook_move[color] == move_n) {
+            board->first_queen_rook_move[color] = 0;
         }
     }
     if (move.piece.type == PAWN) {
         bool found = false;
         for (size_t i = board->moves->size - 1; i-- > 0;) {
             Move tmove = move_data_create(board->moves->data[i]);
-            if (tmove.piece.color == move.piece.color && tmove.piece.type == PAWN) {
+            if (tmove.piece.color == color && tmove.piece.type == PAWN) {
                 found = true;
-                board->last_pawn_move[move.piece.color] = i;
+                board->last_pawn_move[color] = i;
                 break;
             }
         }
         if (!found) {
-            board->last_pawn_move[move.piece.color] = 0;
+            board->last_pawn_move[color] = 0;
         }
     }
-    board->to_move = move.piece.color;
+    board->to_move = color;
     (void) dai32_pop(board->moves);
 }
 

@@ -231,19 +231,13 @@ void generate_knight_moves(const Board *board, size_t idx, DAi32 *moves) {
     }
 }
 
-void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
-    Piece piece = board->pieces[idx];
-    assert(piece.type == KING);
+void generate_attacked(const Board *board, Color color, uint8_t attacked[64]) {
+    int dir = move_direction(color);
 
-    size_t y = IDX_Y(idx);
-    size_t x = IDX_X(idx);
-
-    uint16_t attacked[64] = {0};
-    size_t dir = move_direction(piece.color);
     for (size_t i = 0; i < 64; ++i) {
         if (is_piece_null(board->pieces[i])
             || board->pieces[i].type == NONE 
-            || board->pieces[i].color == piece.color) {
+            || board->pieces[i].color == color) {
             continue;
         }
         int x = IDX_X(i);
@@ -252,11 +246,11 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
         if (board->pieces[i].type == PAWN) {
             size_t dest_1 = YX_TO_IDX(y - dir, x + 1);
             if (yx_is_safe(y - dir, x + 1)) {
-                attacked[dest_1] = i << 8 | board->pieces[i].data;
+                attacked[dest_1] = i + 1;
             }
             size_t dest_2 = YX_TO_IDX(y - dir, x - 1);
             if (yx_is_safe(y - dir, x + 1)) {
-                attacked[dest_2] = i << 8 | board->pieces[i].data;
+                attacked[dest_2] = i + 1;
             }
         } else if (board->pieces[i].type == BISHOP
             || board->pieces[i].type == ROOK
@@ -301,10 +295,10 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
                         break;
                     }
                     if (is_piece_null(board->pieces[dest])) {
-                        attacked[dest] = i << 8 | board->pieces[i].data;
+                        attacked[dest] = i + 1;
                     } else {
                         // if (board->pieces[dest].color != piece.color) {
-                            attacked[dest] = i << 8 | board->pieces[i].data;
+                            attacked[dest] = i + 1;
                         // }
                         break;
                     }
@@ -326,7 +320,7 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
                 int dir_y = dirs[j][1];
                 size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
                 if (yx_is_safe(y + dir_y, x + dir_x)) {
-                    attacked[dest] = i << 8 | board->pieces[i].data;
+                    attacked[dest] = i + 1;
                 }
             }
         } else if (board->pieces[i].type == KING) {
@@ -345,13 +339,24 @@ void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
                 int dir_y = dirs[j][1];
                 size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
                 if (yx_is_safe(y + dir_y, x + dir_x)) {
-                    attacked[dest] = i << 8 | board->pieces[i].data;
+                    attacked[dest] = i + 1;
                 }
             }
         } else {
             assert(0);
         }
     }
+}
+
+void generate_king_moves(const Board *board, size_t idx, DAi32 *moves) {
+    Piece piece = board->pieces[idx];
+    assert(piece.type == KING);
+
+    size_t y = IDX_Y(idx);
+    size_t x = IDX_X(idx);
+
+    uint8_t attacked[64] = {0};
+    generate_attacked(board, piece.color, attacked);
 
     // Normal & captures
     int dirs[8][2] = {
@@ -452,7 +457,7 @@ void generate_moves(const Board *board, Color color, DAi32 *moves) {
 
 Move notation_to_move(const char *notation, Board *board) {
     // TODO: Improve notation_to_move performance
-    DAi32 *moves =  dai32_create();
+    DAi32 *moves = dai32_create();
     Move rmove = (Move) {0};
     Color color = board->to_move;
     generate_moves(board, color, moves);
@@ -497,9 +502,7 @@ Move notation_to_move(const char *notation, Board *board) {
         capture = true;
     }
     if (c[0] == 'K') {
-        char file = c[len - 2];
-        size_t rank = c[len - 1];
-        size_t dest = FR_TO_IDX(file, rank);
+        size_t dest = COORD_TO_IDX(c + len - 2);
         for (size_t i = 0; i < moves->size; ++i) {
             Move move = move_data_create(moves->data[i]);
             if (move.piece.color == color 
@@ -554,9 +557,7 @@ Move notation_to_move(const char *notation, Board *board) {
         return (Move) {0};
     } else if (('a' <= c[0] && c[0] <= 'h') ||('A' <= c[0] && c[0] <= 'H')) {
         if (len == 2 || len == 4) { // e4 or exd4
-            char dest_file = c[len - 2];
-            size_t dest_rank = c[len - 1] - '0';
-            size_t dest = FR_TO_IDX(dest_file, dest_rank);
+            size_t dest = COORD_TO_IDX(c + len - 2);
             for (size_t i = 0; i < moves->size; ++i) {
                 Move move = move_data_create(moves->data[i]);
                 if (move.piece.color == color
