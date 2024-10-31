@@ -56,12 +56,12 @@ Arena *arena_create(void) {
 }
 
 void *arena_allocate(Arena *arena, size_t size) {
-    if(arena->begin == NULL) {
+    if (arena->begin == NULL) {
         arena->begin = region_create(size);
         arena->end = arena->begin;
         return arena->end->data;
     }
-    if(arena->end->size + size <= arena->end->capacity) {
+    if (arena->end->size + size <= arena->end->capacity) {
         void *res = (char *) arena->end->data + arena->end->size;
         arena->end->size += size;
         return res;
@@ -210,7 +210,7 @@ uint32_t *dai32_pop(DAi32 *da) {
         size_t new_capacity = da->capacity / 4;
         dai32_resize(da, new_capacity);
     }
-    return &da->data[--da->size];
+    return &(da->data[--da->size]);
 }
 
 void **da_last_elem(DA *da) {

@@ -41,13 +41,19 @@ bool move_is_type_of(Move move, MoveType type) {
     return move.move_type_mask & type;
 }
 
-Move move_create(Piece piece, unsigned from, unsigned to, unsigned move_type_mask, PieceType promoted_type) {
+Move move_create(Piece piece, 
+                    unsigned from, 
+                    unsigned to, 
+                    unsigned move_type_mask, 
+                    PieceType promoted_type, 
+                    PieceType captured_type) {
     return (Move) {
         .piece={.color=piece.color, .type=piece.type},
         .move_type_mask=move_type_mask, 
         .from=from, 
         .to=to, 
-        .promoted_type=promoted_type
+        .promoted_type=promoted_type,
+        .captured_type=captured_type
     };
 }
 
@@ -119,7 +125,7 @@ void test_move_size(void) {
 
 void test_move_create(void) {
     Piece piece = piece_create(WHITE, KING);
-    Move move = move_create(piece, COORD_TO_IDX("E1"), COORD_TO_IDX("G1"), CASTLE, NONE);
+    Move move = move_create(piece, COORD_TO_IDX("E1"), COORD_TO_IDX("G1"), CASTLE, NONE, NONE);
     assert(move.from == 4);
     assert(move.to == 6);
     assert(move.from == COORD_TO_IDX("e1"));
@@ -130,7 +136,7 @@ void test_move_create(void) {
 
 void test_move_data_create(void) {
     Piece piece = piece_create(BLACK, KING);
-    Move move = move_create(piece, COORD_TO_IDX("E8"), COORD_TO_IDX("G8"), CASTLE, NONE);
+    Move move = move_create(piece, COORD_TO_IDX("E8"), COORD_TO_IDX("G8"), CASTLE, NONE, NONE);
     Move copied_move = move_data_create(move.data);
     assert(copied_move.from == COORD_TO_IDX("e8"));
     assert(copied_move.to == COORD_TO_IDX("g8"));
@@ -142,10 +148,10 @@ void test_move_buf_write(void) {
     Piece piece_1 = piece_create(WHITE, KING);
     Piece piece_2 = piece_create(BLACK, QUEEN);
     Piece piece_3 = piece_create(WHITE, PAWN);
-    Move move_1 = move_create(piece_1, COORD_TO_IDX("e4"), COORD_TO_IDX("e5"), NORMAL, NONE);
-    Move move_2 = move_create(piece_2, COORD_TO_IDX("a1"), COORD_TO_IDX("a8"), CAPTURE, NONE);
-    Move move_3 = move_create(piece_3, COORD_TO_IDX("a7"), COORD_TO_IDX("A8"), PROMOTION, ROOK);
-    Move move_4 = move_create(piece_1, COORD_TO_IDX("E1"), COORD_TO_IDX("G1"), CASTLE, NONE);
+    Move move_1 = move_create(piece_1, COORD_TO_IDX("e4"), COORD_TO_IDX("e5"), NORMAL, NONE, NONE);
+    Move move_2 = move_create(piece_2, COORD_TO_IDX("a1"), COORD_TO_IDX("a8"), CAPTURE, NONE, NONE);
+    Move move_3 = move_create(piece_3, COORD_TO_IDX("a7"), COORD_TO_IDX("A8"), PROMOTION, ROOK, NONE);
+    Move move_4 = move_create(piece_1, COORD_TO_IDX("E1"), COORD_TO_IDX("G1"), CASTLE, NONE, NONE);
     DA *da_1 = da_create();
     DA *da_2 = da_create();
     DA *da_3 = da_create();

@@ -11,6 +11,7 @@ file(GLOB SOURCES "src/*.c")
 add_executable(chess ${SOURCES}
         include/board.h
         include/common.h
+        include/core.h
         include/generate.h
         include/move.h
         include/piece.h

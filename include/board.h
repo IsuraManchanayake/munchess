@@ -99,7 +99,7 @@ void apply_move(Board *board, Move move) {
     }
     size_t move_n = board->moves->size + 1;
     Color color = move.piece.color;
-    if(move_is_type_of(move, CASTLE)) {
+    if (move_is_type_of(move, CASTLE)) {
         size_t rank = IDX_TO_RANK(move.from);
         char file = IDX_TO_FILE(move.to);
         if (file == 'g') {
@@ -162,7 +162,7 @@ void apply_move(Board *board, Move move) {
 void undo_last_move(Board *board) {
     size_t move_n = board->moves->size;
     Move move = move_data_create(board->moves->data[move_n - 1]);
-    Color color = move.piece.color;
+    const Color color = move.piece.color;
     if (move_is_type_of(move, CASTLE)) {
         size_t rank = IDX_TO_RANK(move.from);
         char file = IDX_TO_FILE(move.to);
@@ -232,7 +232,7 @@ void undo_last_move(Board *board) {
             Move tmove = move_data_create(board->moves->data[i]);
             if (tmove.piece.color == color && tmove.piece.type == PAWN) {
                 found = true;
-                board->last_pawn_move[color] = i;
+                board->last_pawn_move[color] = i + 1;
                 break;
             }
         }
@@ -267,32 +267,28 @@ char *board_to_fen(Board *board, DA *da) {
         }
     }
     buf_printf(da, " %c ", color_repr(board->to_move));
+    bool no_castling = true;
     if (board->first_king_move[WHITE] == 0) {
         if (board->first_king_rook_move[WHITE] == 0) {
             buf_printf(da, "K", 0);
-        } else {
-            buf_printf(da, "-", 0);
+            no_castling = false;
         }
         if (board->first_queen_rook_move[WHITE] == 0) {
             buf_printf(da, "Q", 0);
-        } else {
-            buf_printf(da, "-", 0);
+            no_castling = false;
         }
-    } else {
-        buf_printf(da, "-", 0);
     }
     if (board->first_king_move[BLACK] == 0) {
         if (board->first_king_rook_move[BLACK] == 0) {
             buf_printf(da, "k", 0);
-        } else {
-            buf_printf(da, "-", 0);
+            no_castling = false;
         }
         if (board->first_queen_rook_move[BLACK] == 0) {
             buf_printf(da, "q", 0);
-        } else {
-            buf_printf(da, "-", 0);
+            no_castling = false;
         }
-    } else {
+    }
+    if (no_castling) {
         buf_printf(da, "-", 0);
     }
     buf_printf(da, " ", 0);
@@ -330,7 +326,7 @@ char *board_buf_write(Board *board, DA *da) {
     for(size_t i = 0; i < 8; ++i) {
         buf_printf(da, "---+", 0);
     }
-    for(int i = 7; i >= 0; --i) {
+    for(size_t i = 8; i-- > 0;) {
         buf_printf(da, "\n %zu |", i + 1);
         for (size_t j = 0; j < 8; ++j) {
             buf_printf(da, " %c |", piece_repr(ATyx(board, i, j)));
@@ -378,17 +374,17 @@ void test_board_display(void) {
 void test_apply_move(void) {
     Board *board = board_create();
     place_initial_pieces(board);
-    Move move_1 = move_create(ATcoord(board, "E2"), COORD_TO_IDX("E2"), COORD_TO_IDX("E4"), NORMAL, NONE);
+    Move move_1 = move_create(ATcoord(board, "E2"), COORD_TO_IDX("E2"), COORD_TO_IDX("E4"), NORMAL, NONE, NONE);
     apply_move(board, move_1);
-    Move move_2 = move_create(ATcoord(board, "E7"), COORD_TO_IDX("E7"), COORD_TO_IDX("E5"), NORMAL, NONE);
+    Move move_2 = move_create(ATcoord(board, "E7"), COORD_TO_IDX("E7"), COORD_TO_IDX("E5"), NORMAL, NONE, NONE);
     apply_move(board, move_2);
-    Move move_3 = move_create(ATcoord(board, "G1"), COORD_TO_IDX("G1"), COORD_TO_IDX("F3"), NORMAL, NONE);
+    Move move_3 = move_create(ATcoord(board, "G1"), COORD_TO_IDX("G1"), COORD_TO_IDX("F3"), NORMAL, NONE, NONE);
     apply_move(board, move_3);
-    Move move_4 = move_create(ATcoord(board, "B8"), COORD_TO_IDX("B8"), COORD_TO_IDX("C6"), NORMAL, NONE);
+    Move move_4 = move_create(ATcoord(board, "B8"), COORD_TO_IDX("B8"), COORD_TO_IDX("C6"), NORMAL, NONE, NONE);
     apply_move(board, move_4);
-    Move move_5 = move_create(ATcoord(board, "F3"), COORD_TO_IDX("F3"), COORD_TO_IDX("E5"), CAPTURE, NONE);
+    Move move_5 = move_create(ATcoord(board, "F3"), COORD_TO_IDX("F3"), COORD_TO_IDX("E5"), CAPTURE, NONE, NONE);
     apply_move(board, move_5);
-    Move move_6 = move_create(ATcoord(board, "C6"), COORD_TO_IDX("C6"), COORD_TO_IDX("E5"), CAPTURE, NONE);
+    Move move_6 = move_create(ATcoord(board, "C6"), COORD_TO_IDX("C6"), COORD_TO_IDX("E5"), CAPTURE, NONE, NONE);
     apply_move(board, move_6);
 
     DA *da = da_create();
@@ -423,9 +419,9 @@ void test_undo_last_move(void) {
     place_initial_pieces(board);
 
     Move moves[] = {
-        move_create(ATcoord(board, "E2"), COORD_TO_IDX("E2"), COORD_TO_IDX("E4"), NORMAL, NONE),
-        move_create(ATcoord(board, "C7"), COORD_TO_IDX("C7"), COORD_TO_IDX("C5"), NORMAL, NONE),
-        move_create(ATcoord(board, "G1"), COORD_TO_IDX("G1"), COORD_TO_IDX("F3"), NORMAL, NONE),
+        move_create(ATcoord(board, "E2"), COORD_TO_IDX("E2"), COORD_TO_IDX("E4"), NORMAL, NONE, NONE),
+        move_create(ATcoord(board, "C7"), COORD_TO_IDX("C7"), COORD_TO_IDX("C5"), NORMAL, NONE, NONE),
+        move_create(ATcoord(board, "G1"), COORD_TO_IDX("G1"), COORD_TO_IDX("F3"), NORMAL, NONE, NONE),
     };
 
     for (size_t i = 0; i < sizeof(moves) / sizeof(moves[0]); ++i) {
@@ -456,7 +452,7 @@ void test_board_to_fen(void) {
     const char *expected_1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     assert(strcmp(expected_1, fen_1) == 0);
     
-    Move move_1 = move_create(ATcoord(board, "E2"), COORD_TO_IDX("E2"), COORD_TO_IDX("E4"), NORMAL, NONE);
+    Move move_1 = move_create(ATcoord(board, "E2"), COORD_TO_IDX("E2"), COORD_TO_IDX("E4"), NORMAL, NONE, NONE);
     apply_move(board, move_1);
     DA *da_2 = da_create();
     char *fen_2 = board_to_fen(board, da_2);
@@ -464,7 +460,7 @@ void test_board_to_fen(void) {
     const char *expected_2 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
     assert(strcmp(expected_2, fen_2) == 0);
 
-    Move move_2 = move_create(ATcoord(board, "C7"), COORD_TO_IDX("C7"), COORD_TO_IDX("C5"), NORMAL, NONE);
+    Move move_2 = move_create(ATcoord(board, "C7"), COORD_TO_IDX("C7"), COORD_TO_IDX("C5"), NORMAL, NONE, NONE);
     apply_move(board, move_2);
     DA *da_3 = da_create();
     char *fen_3 = board_to_fen(board, da_3);
@@ -472,7 +468,7 @@ void test_board_to_fen(void) {
     const char *expected_3 = "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2";
     assert(strcmp(expected_3, fen_3) == 0);
 
-    Move move_3 = move_create(ATcoord(board, "G1"), COORD_TO_IDX("G1"), COORD_TO_IDX("F3"), NORMAL, NONE);
+    Move move_3 = move_create(ATcoord(board, "G1"), COORD_TO_IDX("G1"), COORD_TO_IDX("F3"), NORMAL, NONE, NONE);
     apply_move(board, move_3);
     DA *da_4 = da_create();
     char *fen_4 = board_to_fen(board, da_4);
