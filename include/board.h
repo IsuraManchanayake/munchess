@@ -159,6 +159,10 @@ void apply_move(Board *board, Move move) {
     dai32_push(board->moves, move.data);
 }
 
+void set_square_empty(Board *board, size_t idx) {
+    set_piece_null(board->pieces + idx);
+}
+
 void undo_last_move(Board *board) {
     size_t move_n = board->moves->size;
     Move move = move_data_create(board->moves->data[move_n - 1]);
@@ -170,12 +174,12 @@ void undo_last_move(Board *board) {
             Piece rook = ATfr(board, 'f', rank);
             assert(rook.type == ROOK);
             ATfr(board, 'h', rank) = rook;
-            set_piece_null(&ATfr(board, 'f', rank));
+            set_square_empty(board, FR_TO_IDX('f', rank));
         } else if (file == 'c') {
             Piece rook = ATfr(board, 'd', rank);
             assert(rook.type == ROOK);
             ATfr(board, 'a', rank) = rook;
-            set_piece_null(&ATfr(board, 'd', rank));
+            set_square_empty(board, FR_TO_IDX('d', rank));
         } else {
             assert(0);
         }
@@ -204,7 +208,7 @@ void undo_last_move(Board *board) {
             board->last_capture_move[color] = 0;
         }
     } else {
-        set_piece_null(&ATidx(board, move.to));
+        set_square_empty(board, move.to);
     }
     if (move.piece.type == KING) {
         if (board->first_king_move[color] == move_n) {

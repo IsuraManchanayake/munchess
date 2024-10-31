@@ -479,7 +479,7 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
     uint8_t attacked[64] = {0};
     size_t king_idx;
     generate_attacked(board, piece.color, attacked, &king_idx);
-    (void) king_idx;
+    assert(king_idx == idx);
 
     // Normal & captures
     int dirs[8][2] = {
@@ -496,6 +496,9 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
         int dir_x = dirs[j][0];
         int dir_y = dirs[j][1];
         size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
+        if (!yx_is_safe(y + dir_y, x + dir_x)) {
+            continue;
+        }
         if (attacked[dest]) {
             continue;
         }
@@ -586,7 +589,13 @@ Move notation_to_move(const char *notation, Board *board) {
     DAi32 *moves = dai32_create();
     Move rmove = (Move) {0};
     Color color = board->to_move;
+
+    time_t start_time = time_now();
     generate_moves(board, moves);
+    time_t end_time = time_now();
+    double diff_ms = (end_time - start_time) / 1000.0;
+    printf("Time for generating moves: %f ms\n", diff_ms);
+
     const char *c = notation;
     size_t len = strlen(c);
     bool capture = false;

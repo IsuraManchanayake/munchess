@@ -184,7 +184,7 @@ void da_push(DA *da, void *elem) {
 
 void dai32_push(DAi32 *da, uint32_t elem) {
     if (da->capacity == 0) {
-        da->data = (uint32_t*) malloc(DA_INITIAL_CAPACITY * sizeof(uint32_t));
+        da->data = (uint32_t *) malloc(DA_INITIAL_CAPACITY * sizeof(uint32_t));
         da->capacity = DA_INITIAL_CAPACITY;
     } else if (da->size == da->capacity) {
         size_t new_capacity = 2 * da->capacity;
