@@ -1,6 +1,6 @@
 #pragma once
 
-static int test_depth = 0;
+extern int test_depth;
 
 #define test_wrapper(f) do { \
     ++test_depth; \

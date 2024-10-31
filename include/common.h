@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <stdint.h>
 
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b));
@@ -254,7 +255,7 @@ void test_da(void) {
         *v = (int) i;
         da_push(da, v);
         assert(da->capacity >= da->size);
-        assert(da->size = (i + 1));
+        assert(da->size == (i + 1));
         assert(*(int *)*da_last_elem(da) == (int) i);
         // printf("Capacity: %zu ", da->capacity);
         // printf("Size: %zu ", da->size);

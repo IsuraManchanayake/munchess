@@ -21,7 +21,7 @@ bool idx_is_safe(size_t idx) {
 }
 
 bool yx_is_safe(size_t y, size_t x) {
-    return 0 <= y && y < 8 && 0 <= x && x < 8;
+    return y < 8 && x < 8;
 }
 
 Piece board_safe_at(const Board *board, size_t idx) {

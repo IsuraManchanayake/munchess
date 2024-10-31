@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 
+int test_depth = 0;
 
 void test(void) {
     test_wrapper(test_common);
