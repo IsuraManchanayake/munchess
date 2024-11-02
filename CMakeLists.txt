@@ -14,6 +14,7 @@ add_executable(chess ${SOURCES}
         include/core.h
         include/generate.h
         include/move.h
+        include/pgn.h
         include/piece.h
         include/tests.h
         include/utils.h

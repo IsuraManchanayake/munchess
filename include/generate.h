@@ -108,9 +108,11 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
     }
 }
 
-size_t king_in_check(Board *board, Color color, size_t king_idx) {
+size_t king_in_check(Board *board, size_t king_idx) {
     int x = IDX_X(king_idx);
     int y = IDX_Y(king_idx);
+    Piece king_piece = board->pieces[king_idx];
+    Color color = king_piece.color;
 
     // Pawn
     int dir = move_direction(color);
@@ -126,7 +128,7 @@ size_t king_in_check(Board *board, Color color, size_t king_idx) {
     if (yx_is_safe(y + dir, x - 1)) {
         if (board->pieces[dest].color != color 
             && board->pieces[dest].type == PAWN) {
-            return dest;
+            return dest + 1;
         }
     }
 
@@ -235,7 +237,7 @@ size_t king_in_check(Board *board, Color color, size_t king_idx) {
 
 void validate_and_push_move(Board *board, DAi32 *moves, Move move, size_t king_idx) {
     apply_move(board, move);
-    if (king_in_check(board, move.piece.color, king_idx) == 0) {
+    if (king_in_check(board, king_idx) == 0) {
         dai32_push(moves, move.data);
     }
     undo_last_move(board);
@@ -481,6 +483,22 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
     generate_attacked(board, piece.color, attacked, &king_idx);
     assert(king_idx == idx);
 
+    // if (board->moves->size == 91) {
+    //     DA *da = da_create();
+    //     for(size_t i = 0; i < 64; ++i) {
+    //         const char pos[] = IDX_TO_COORD(i);
+    //         const char from[] = IDX_TO_COORD(attacked[i] - 1);
+    //         Piece attacking_piece = board->pieces[attacked[i] - 1];
+    //         if (!is_piece_null(attacking_piece)) {
+    //             buf_printf(da, "%s %s %c\n", pos, from, piece_repr(attacking_piece));
+    //         } else {
+    //             buf_printf(da, "%s [SAFE]\n", pos);
+    //         }
+    //     }
+    //     printf("%s", (char *) da->data);
+    //     da_free(da);
+    // }
+    
     // Normal & captures
     int dirs[8][2] = {
         {1, 0},
@@ -492,7 +510,7 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
         {-1, 1},
         {-1, -1}
     };
-    for (size_t j = 0; j < 8; ++j) {
+    for (size_t j = 0; j < sizeof(dirs) / sizeof(dirs[0]); ++j) {
         int dir_x = dirs[j][0];
         int dir_y = dirs[j][1];
         size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
@@ -504,32 +522,15 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
         }
         if (is_piece_null(board->pieces[dest])) {
             Move move = move_create(piece, idx, dest, NORMAL, NONE, NONE);
-            validate_and_push_move(board, moves, move, king_idx);
+            validate_and_push_move(board, moves, move, dest);
         } else {
             if (board->pieces[dest].color != piece.color && board->pieces[dest].type != KING) {
                 Move move = move_create(piece, idx, dest, CAPTURE, NONE, board->pieces[dest].type);
-                validate_and_push_move(board, moves, move, king_idx);
+                validate_and_push_move(board, moves, move, dest);
             }
-            break;
         }
     }
 
-    // if (board->moves->size == 6) {
-    //     DA *da = da_create();
-    //     for(size_t i = 0; i < 64; ++i) {
-    //         const char pos[] = IDX_TO_COORD(i);
-    //         Piece attacking_piece = piece_data_create(attacked[i] & 0xff);
-    //         const char from[] = IDX_TO_COORD(attacked[i] >> 8);
-    //         if (!is_piece_null(attacking_piece)) {
-    //             buf_printf(da, "%s %s %c\n", pos, from, piece_repr(attacking_piece));
-    //         } else {
-    //             buf_printf(da, "%s [SAFE]\n", pos);
-    //         }
-    //     }
-    //     printf("%s", (char *) da->data);
-    //     da_free(da);
-    // }
-    
     // Castle
     if (board->first_king_move[piece.color] == 0) {
         if (board->first_king_rook_move[piece.color] == 0) {
@@ -542,7 +543,7 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
                 && is_piece_null(board->pieces[sq_2])
                 && is_piece_null(board->pieces[sq_3])) {
                 Move move = move_create(piece, idx, sq_3, CASTLE, NONE, NONE);
-                validate_and_push_move(board, moves, move, king_idx);
+                validate_and_push_move(board, moves, move, sq_3);
             }
         }
         if (board->first_queen_rook_move[piece.color] == 0) {
@@ -557,7 +558,7 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
                 && is_piece_null(board->pieces[sq_3])
                 && is_piece_null(board->pieces[sq_4])) {
                 Move move = move_create(piece, idx, sq_3, CASTLE, NONE, NONE);
-                validate_and_push_move(board, moves, move, king_idx);
+                validate_and_push_move(board, moves, move, sq_3);
             }
         }
     }
@@ -653,7 +654,7 @@ Move notation_to_move(const char *notation, Board *board) {
         size_t dest = COORD_TO_IDX(c + len - 2);
         char rank_key = 0;
         char file_key = 0;
-        if (len == 4) {
+        if ((!capture && len == 4) || (capture && len == 5)) {
             if (('a' <= c[1] && c[1] <= 'h') || ('A' <= c[1] && c[1] <= 'H')) {
                 file_key = c[1];
             } else if (('1' <= c[1] && c[1] <= '8')) {
@@ -662,11 +663,11 @@ Move notation_to_move(const char *notation, Board *board) {
                 assert(0);
             }
             ++c;
-        } else if (len == 5) {
+        } else if ((!capture && len == 5) || (capture && len == 6)) {
             file_key = c[1];
             rank_key = c[2] - '0';
             c += 2;
-        } else if (len != 3) {
+        } else if ((!capture && len != 3) || (capture && len != 4)) {
             assert(0);
         }
         // char dest_file = *(++c);
@@ -730,7 +731,7 @@ void test_generate_initial_moves(void) {
     apply_move(board, move_4);
     DAi32 *moves = dai32_create();
     generate_moves(board, moves);
-    assert(moves->size == 26);
+    assert(moves->size == 27);
     // debugzu(moves->size);
     // for (size_t i = 0; i < moves->size; ++i) {
     //     DA *da = da_create();

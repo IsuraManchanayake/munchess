@@ -32,3 +32,26 @@ time_t time_now(void) {
   full_time = tv.tv_sec * 1000000 + tv.tv_usec;
   return full_time;
 }
+
+char* read_file(const char* path) {
+    FILE* fp = fopen(path, "rb");
+    if (!fp) {
+        return NULL;
+    }
+    fseek(fp, 0, SEEK_END);
+    long len = ftell(fp);
+    rewind(fp);
+    char* buf = malloc(len + 1);
+    if (fread(buf, len, 1, fp) != 1) {
+        fclose(fp);
+        free(buf);
+        return NULL;
+    }
+    buf[len] = 0;
+    fclose(fp);
+    return buf;
+}
+
+void error_exit(int status) {
+    exit(status);
+}
