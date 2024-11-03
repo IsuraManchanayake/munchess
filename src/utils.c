@@ -84,6 +84,8 @@ void error_exit(int status) {
 }
 
 #if __STDC_VERSION__ < 202311L
+#include <string.h>
+
 char* strndup(const char* str, size_t n) {
     size_t l = strlen(str);
     l = min(l, n);
