@@ -6,13 +6,7 @@
 #include "generate.h"
 #include "pgn.h"
 
-#include <stdio.h>
-
 int test_depth = 0;
-
-const char *c = NULL;
-size_t line_n = 1;
-size_t col_n = 1;
 
 void test(void) {
     test_wrapper(test_common);

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stdio.h>
+#include <assert.h>
+
 extern int test_depth;
 
 #define test_wrapper(f) do { \
