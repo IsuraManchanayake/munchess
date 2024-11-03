@@ -36,7 +36,7 @@ set(HEADER_FILES
 target_sources(chess_lib PRIVATE ${HEADER_FILES})
 
 add_executable(engine
-    src/main.c
+    src/engine.c
 )
 
 add_executable(tests
