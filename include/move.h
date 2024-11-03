@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-typedef enum : uint8_t {
+typedef enum: uint8_t {
     NORMAL=0,
     CAPTURE=1<<0,
     EN_PASSANT=1<<1,
