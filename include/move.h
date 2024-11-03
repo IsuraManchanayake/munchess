@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-typedef enum: uint8_t {
+typedef UCHAR_ENUM {
     NORMAL=0,
     CAPTURE=1<<0,
     EN_PASSANT=1<<1,
@@ -15,15 +15,13 @@ typedef enum: uint8_t {
 
 typedef union Move {
     struct {
-        PieceType promoted_type : 3;
+        ENUM_BITS(PieceType, promoted_type, 3);
         uint8_t move_type_mask : 4;
         uint8_t from : 6;
         uint8_t to : 6;
-        //struct {
-            Color piece_color : 1;
-            PieceType piece_type : 3;
-        //} piece;
-        PieceType captured_type : 3;
+        ENUM_BITS(Color, piece_color, 1);
+        ENUM_BITS(PieceType, piece_type, 3);
+        ENUM_BITS(PieceType, captured_type, 3);
     };
     uint32_t data;
 } Move;

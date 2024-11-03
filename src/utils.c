@@ -12,18 +12,6 @@
 #include <sys/time.h>
 #endif
 
-#ifndef min
-#define min(a, b) ((a) < (b) ? (a) : (b));
-#endif
-#ifndef max
-#define max(a, b) ((a) < (b) ? (b) : (a));
-#endif
-
-#define debugzu(x) (printf("%s = %zu\n", #x, (x)))
-#define debugi(x) (printf("%s = %d\n", #x, (x)))
-#define debugc(x) (printf("%s = %c\n", #x, (x)))
-#define debugs(x) (printf("%s = %s\n", #x, (x)))
-
 unsigned rand_lim(unsigned limit) {
     unsigned divisor = RAND_MAX/(limit+1);
     unsigned retval;

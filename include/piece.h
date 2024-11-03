@@ -3,12 +3,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum: uint8_t {
+#include "utils.h"
+
+typedef UCHAR_ENUM {
     WHITE,
     BLACK,
 } Color;
 
-typedef enum: uint8_t {
+typedef UCHAR_ENUM {
     NONE=0,
     PAWN,
     KNIGHT,
@@ -18,25 +20,13 @@ typedef enum: uint8_t {
     KING
 } PieceType;
 
-#ifdef _MSC_VER
-    #pragma pack(push, 1)
-#endif
-
 typedef union Piece {
     struct {
-        Color color:1;
-        PieceType type:3; 
-    }
-#ifdef __GNUC__
-    __attribute__((packed)) // For GCC and Clang
-#endif
-;
+        ENUM_BITS(Color, color, 1);
+        ENUM_BITS(PieceType, type, 3);
+    };
     uint8_t data;
 } Piece;
-
-#ifdef _MSC_VER
-    #pragma pack(pop)
-#endif
 
 Piece piece_create(Color color, PieceType type);
 

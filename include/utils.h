@@ -9,6 +9,14 @@
 #define max(a, b) ((a) < (b) ? (b) : (a));
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define UCHAR_ENUM enum: uint8_t
+#define ENUM_BITS(Type, name, bits) Type name : bits
+#else
+#define UCHAR_ENUM enum
+#define ENUM_BITS(Type, name, bits) uint8_t name : bits
+#endif
+
 #define debugzu(x) (printf("%s = %zu\n", #x, (x)))
 #define debugi(x) (printf("%s = %d\n", #x, (x)))
 #define debugc(x) (printf("%s = %c\n", #x, (x)))
