@@ -17,7 +17,7 @@ bool is_piece_null(Piece piece) {
 }
 
 char piece_type_repr(PieceType type) {
-    if (NONE <= type && type <= KING) {
+    if (type <= KING) {
         return " pnbrqk"[(size_t)type];
     }
     return ' ';

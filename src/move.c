@@ -17,7 +17,8 @@ Move move_create(Piece piece,
                     PieceType promoted_type, 
                     PieceType captured_type) {
     return (Move) {
-        .piece={.color=piece.color, .type=piece.type},
+        .piece_color=piece.color, 
+        .piece_type=piece.type,
         .move_type_mask=move_type_mask, 
         .from=from, 
         .to=to, 
@@ -40,7 +41,7 @@ char *move_buf_write(Move move, DA *da) {
         return (char *) da->data;
     }
     if (move_is_type_of(move, CASTLE)) {
-        buf_printf(da, "%c ", piece_repr_base(move.piece.color, move.piece.type));
+        buf_printf(da, "%c ", piece_repr_base(move.piece_color, move.piece_type));
         volatile char to_file = IDX_TO_FILE(move.to);
         if (to_file == 'g') {
             buf_printf(da, "O-O", 0);
@@ -52,7 +53,7 @@ char *move_buf_write(Move move, DA *da) {
     } else {
         const char from[3] = IDX_TO_COORD(move.from);
         const char to[3] = IDX_TO_COORD(move.to);
-        buf_printf(da, "%c ", piece_repr_base(move.piece.color, move.piece.type));
+        buf_printf(da, "%c ", piece_repr_base(move.piece_color, move.piece_type));
         buf_printf(da, "%s", from);
         char mid = '-';
         if (move_is_type_of(move, CAPTURE)) {
@@ -64,7 +65,7 @@ char *move_buf_write(Move move, DA *da) {
         buf_printf(da, "%s", to);
         if (move_is_type_of(move, PROMOTION)) {
             char promoted = piece_type_repr(move.promoted_type);
-            promoted = move.piece.color == WHITE ? promoted ^ 32 : promoted;
+            promoted = move.piece_color == WHITE ? promoted ^ 32 : promoted;
             buf_printf(da, "=%c", promoted);
         }
     }
@@ -80,8 +81,8 @@ void test_move_size(void) {
     move.from = 63;
     move.to = 63;
     move.captured_type = 7;
-    move.piece.color = 1;
-    move.piece.type = 7;
+    move.piece_color = 1;
+    move.piece_type = 7;
     // debugzu((size_t)move.data);
     // 00001111 00111111 11111111 11111111
 
@@ -97,8 +98,8 @@ void test_move_create(void) {
     assert(move.to == 6);
     assert(move.from == COORD_TO_IDX("e1"));
     assert(move.to == COORD_TO_IDX("g1"));
-    assert(move.piece.color == WHITE);
-    assert(move.piece.type == KING);
+    assert(move.piece_color == WHITE);
+    assert(move.piece_type == KING);
 }
 
 void test_move_data_create(void) {
@@ -107,8 +108,8 @@ void test_move_data_create(void) {
     Move copied_move = move_data_create(move.data);
     assert(copied_move.from == COORD_TO_IDX("e8"));
     assert(copied_move.to == COORD_TO_IDX("g8"));
-    assert(copied_move.piece.color == BLACK);
-    assert(copied_move.piece.type == KING);
+    assert(copied_move.piece_color == BLACK);
+    assert(copied_move.piece_type == KING);
 }
 
 void test_move_buf_write(void) {

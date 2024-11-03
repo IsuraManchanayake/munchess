@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-typedef enum {
+typedef enum : uint8_t {
     NORMAL=0,
     CAPTURE=1<<0,
     EN_PASSANT=1<<1,
@@ -15,25 +15,15 @@ typedef enum {
 
 typedef union Move {
     struct {
-        PieceType promoted_type:3;
-        unsigned move_type_mask:4;
-        unsigned from:6;
-        unsigned to:6;
-        PieceType captured_type:3;
-#ifdef _MSC_VER
-    #pragma pack(push, 1)
-#endif
-        struct {
-            Color color:1;
-            PieceType type:3;
-        }
-#ifdef __GNUC__
-    __attribute__((packed)) // For GCC and Clang
-#endif
-#ifdef _MSC_VER
-    #pragma pack(pop)
-#endif
-        piece;
+        PieceType promoted_type : 3;
+        uint8_t move_type_mask : 4;
+        uint8_t from : 6;
+        uint8_t to : 6;
+        //struct {
+            Color piece_color : 1;
+            PieceType piece_type : 3;
+        //} piece;
+        PieceType captured_type : 3;
     };
     uint32_t data;
 } Move;

@@ -84,11 +84,11 @@ int move_direction(Color color) {
 }
 
 void apply_move(Board *board, Move move) {
-    if (move.piece.color != board->to_move) {
+    if (move.piece_color != board->to_move) {
         assert(0);
     }
     size_t move_n = board->moves->size + 1;
-    Color color = move.piece.color;
+    Color color = move.piece_color;
     if (move_is_type_of(move, CASTLE)) {
         size_t rank = IDX_TO_RANK(move.from);
         char file = IDX_TO_FILE(move.to);
@@ -106,7 +106,7 @@ void apply_move(Board *board, Move move) {
             assert(0);
         }
     } else if (move_is_type_of(move, PROMOTION)) {
-        move.piece.type = move.promoted_type;
+        move.piece_type = move.promoted_type;
     } else if (move_is_type_of(move, EN_PASSANT)) {
         int dir = move_direction(color);
         size_t to_y = IDX_Y(move.to);
@@ -116,8 +116,8 @@ void apply_move(Board *board, Move move) {
     set_piece_null(&ATidx(board, move.from));
     Piece *piece_to = &ATidx(board, move.to);
     piece_to->color = color;
-    piece_to->type = move.piece.type;
-    if (move.piece.type == KING 
+    piece_to->type = move.piece_type;
+    if (move.piece_type == KING 
         && board->first_king_move[color] == 0) {
         board->first_king_move[color] = move_n;
         if (move_is_type_of(move, CASTLE)) {
@@ -130,7 +130,7 @@ void apply_move(Board *board, Move move) {
                 assert(0);
             }
         }
-    } else if (move.piece.type == ROOK) {
+    } else if (move.piece_type == ROOK) {
         size_t r = color == WHITE ? 1 : 8;
         if (board->first_king_rook_move[color] == 0 
             && move.from == FR_TO_IDX('H', r)) {
@@ -139,7 +139,7 @@ void apply_move(Board *board, Move move) {
             && move.from == FR_TO_IDX('A', r)) {
             board->first_queen_rook_move[color] = move_n;
         }
-    } else if (move.piece.type == PAWN) {
+    } else if (move.piece_type == PAWN) {
         board->last_pawn_move[color] = move_n;
     }
     if (move_is_type_of(move, CAPTURE)) {
@@ -156,7 +156,7 @@ void set_square_empty(Board *board, size_t idx) {
 void undo_last_move(Board *board) {
     size_t move_n = board->moves->size;
     Move move = move_data_create(board->moves->data[move_n - 1]);
-    const Color color = move.piece.color;
+    const Color color = move.piece_color;
     if (move_is_type_of(move, CASTLE)) {
         size_t rank = IDX_TO_RANK(move.from);
         char file = IDX_TO_FILE(move.to);
@@ -174,7 +174,7 @@ void undo_last_move(Board *board) {
             assert(0);
         }
     } else if (move_is_type_of(move, PROMOTION)) {
-        move.piece.type = PAWN;
+        move.piece_type = PAWN;
     } else if (move_is_type_of(move, EN_PASSANT)) {
         int dir = move_direction(color);
         // unsigned from_y = IDX_Y(move.from);
@@ -182,13 +182,13 @@ void undo_last_move(Board *board) {
         size_t to_x = IDX_X(move.to);
         ATyx(board, to_y - dir, to_x) = piece_create(op_color(color), PAWN);
     }
-    ATidx(board, move.from) = piece_create(color, move.piece.type);
+    ATidx(board, move.from) = piece_create(color, move.piece_type);
     if (move_is_type_of(move, CAPTURE)) {
         ATidx(board, move.to) = piece_create(op_color(color), move.captured_type);
         bool found = false;
         for (size_t i = board->moves->size - 1; i-- > 0;) {
             Move tmove = move_data_create(board->moves->data[i]);
-            if (tmove.piece.color == color && move_is_type_of(tmove, CAPTURE)) {
+            if (tmove.piece_color == color && move_is_type_of(tmove, CAPTURE)) {
                 found = true;
                 board->last_capture_move[color] = i;
                 break;
@@ -200,7 +200,7 @@ void undo_last_move(Board *board) {
     } else {
         set_square_empty(board, move.to);
     }
-    if (move.piece.type == KING) {
+    if (move.piece_type == KING) {
         if (board->first_king_move[color] == move_n) {
             board->first_king_move[color] = 0;
             if (move_is_type_of(move, CASTLE)) {
@@ -212,7 +212,7 @@ void undo_last_move(Board *board) {
                 }
             }
         }
-    } else if (move.piece.type == ROOK) {
+    } else if (move.piece_type == ROOK) {
         size_t r = color == WHITE ? 1 : 8;
         if (move.from == FR_TO_IDX('H', r) && board->first_king_rook_move[color] == move_n) {
             board->first_king_rook_move[color] = 0;
@@ -220,11 +220,11 @@ void undo_last_move(Board *board) {
             board->first_queen_rook_move[color] = 0;
         }
     }
-    if (move.piece.type == PAWN) {
+    if (move.piece_type == PAWN) {
         bool found = false;
         for (size_t i = board->moves->size - 1; i-- > 0;) {
             Move tmove = move_data_create(board->moves->data[i]);
-            if (tmove.piece.color == color && tmove.piece.type == PAWN) {
+            if (tmove.piece_color == color && tmove.piece_type == PAWN) {
                 found = true;
                 board->last_pawn_move[color] = i + 1;
                 break;
@@ -289,11 +289,11 @@ char *board_to_fen(Board *board, DA *da) {
     bool en_passant = false;
     if (board->moves->size > 0) {
         Move move = move_data_create(*dai32_last_elem(board->moves));
-        if (move.piece.type == PAWN) {
+        if (move.piece_type == PAWN) {
             size_t start_y = IDX_Y(move.from);
             size_t dest_y = IDX_Y(move.to);
             size_t x = IDX_X(move.from);
-            int dir = move_direction(move.piece.color);
+            int dir = move_direction(move.piece_color);
             if (dest_y == 2 * dir + start_y) {
                 en_passant = true;
                 size_t en_passant_target_y = start_y + dir;

@@ -312,7 +312,7 @@ void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
     // En passant moves
     if ((y == 4 && piece.color == WHITE) && (y == 3 && piece.color == BLACK)) {
         Move last_move = move_data_create(*dai32_last_elem(board->moves));
-        if (!is_move_null(last_move) && last_move.piece.type == PAWN) {
+        if (!is_move_null(last_move) && last_move.piece_type == PAWN) {
             unsigned last_move_from_x = IDX_X(last_move.from);
             unsigned last_move_to_x = IDX_X(last_move.to);
             if (last_move_from_x == last_move_to_x 
@@ -611,8 +611,8 @@ Move notation_to_move(const char *notation, Board *board) {
     if (len == 3 && strncmp(c, "O-O", len) == 0) {
         for (size_t i = 0; i < moves->size; ++i) {
             Move move = move_data_create(moves->data[i]);
-            if (move.piece.color == color
-                && move.piece.type == KING
+            if (move.piece_color == color
+                && move.piece_type == KING
                 && move_is_type_of(move, CASTLE)
                 && IDX_X(move.to) == 6) {
                 rmove = move;
@@ -623,8 +623,8 @@ Move notation_to_move(const char *notation, Board *board) {
     } else if (len == 5 && strncmp(c, "O-O-O", len) == 0) {
         for (size_t i = 0; i < moves->size; ++i) {
             Move move = move_data_create(moves->data[i]);
-            if (move.piece.color == color
-                && move.piece.type == KING
+            if (move.piece_color == color
+                && move.piece_type == KING
                 && move_is_type_of(move, CASTLE)
                 && IDX_X(move.to) == 2) {
                 rmove = move;
@@ -644,8 +644,8 @@ Move notation_to_move(const char *notation, Board *board) {
         size_t dest = COORD_TO_IDX(c + len - 2);
         for (size_t i = 0; i < moves->size; ++i) {
             Move move = move_data_create(moves->data[i]);
-            if (move.piece.color == color 
-                && move.piece.type == KING 
+            if (move.piece_color == color 
+                && move.piece_type == KING 
                 && move.to == dest) {
                 rmove = move;
                 goto finalize;
@@ -678,10 +678,10 @@ Move notation_to_move(const char *notation, Board *board) {
         // size_t dest = FR_TO_IDX(dest_file, dest_rank);
         for (size_t i = 0; i < moves->size; ++i) {
             Move move = move_data_create(moves->data[i]);
-            if (move.piece.color != color) {
+            if (move.piece_color != color) {
                 continue;
             }
-            if (move.piece.type != piece_type) {
+            if (move.piece_type != piece_type) {
                 continue;
             }
             char from_file = IDX_TO_FILE(move.from);
@@ -696,12 +696,12 @@ Move notation_to_move(const char *notation, Board *board) {
         return (Move) {0};
     } else if (('a' <= c[0] && c[0] <= 'h') ||('A' <= c[0] && c[0] <= 'H')) {
         if (len == 2 || len == 4) { // e4 or exd4
-            size_t file = c[0];
+            char file = c[0];
             size_t dest = COORD_TO_IDX(c + len - 2);
             for (size_t i = 0; i < moves->size; ++i) {
                 Move move = move_data_create(moves->data[i]);
-                if (move.piece.color == color
-                    && move.piece.type ==  PAWN
+                if (move.piece_color == color
+                    && move.piece_type ==  PAWN
                     && move.to == dest
                     && IDX_TO_FILE(move.from) == file) {
                     rmove = move;
