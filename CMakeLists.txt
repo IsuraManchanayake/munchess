@@ -60,3 +60,11 @@ function(set_compiler_flags target)
 endfunction()
 
 set_compiler_flags(chess)
+
+set(RESOURCE_FILES
+    ${CMAKE_SOURCE_DIR}/res/tests/game-1.pgn
+)
+
+target_sources(chess PRIVATE ${RESOURCE_FILES})
+
+source_group("Resource Files" FILES ${RESOURCE_FILES})

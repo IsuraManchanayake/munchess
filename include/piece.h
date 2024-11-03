@@ -3,12 +3,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum : uint8_t  {
+typedef enum: uint8_t {
     WHITE,
     BLACK,
 } Color;
 
-typedef enum : uint8_t  {
+typedef enum: uint8_t {
     NONE=0,
     PAWN,
     KNIGHT,
