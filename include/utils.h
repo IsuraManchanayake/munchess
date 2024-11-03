@@ -9,7 +9,7 @@
 #define max(a, b) ((a) < (b) ? (b) : (a));
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) || defined(__clang__)) && (__STDC_VERSION__ >= 201710L)
 #define UCHAR_ENUM enum: uint8_t
 #define ENUM_BITS(Type, name, bits) Type name : bits
 #else
