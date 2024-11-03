@@ -693,12 +693,14 @@ Move notation_to_move(const char *notation, Board *board) {
         return (Move) {0};
     } else if (('a' <= c[0] && c[0] <= 'h') ||('A' <= c[0] && c[0] <= 'H')) {
         if (len == 2 || len == 4) { // e4 or exd4
+            size_t file = c[0];
             size_t dest = COORD_TO_IDX(c + len - 2);
             for (size_t i = 0; i < moves->size; ++i) {
                 Move move = move_data_create(moves->data[i]);
                 if (move.piece.color == color
                     && move.piece.type ==  PAWN
-                    && move.to == dest) {
+                    && move.to == dest
+                    && IDX_TO_FILE(move.from) == file) {
                     rmove = move;
                     goto finalize;
                 }
