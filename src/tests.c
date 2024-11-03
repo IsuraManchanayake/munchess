@@ -6,9 +6,16 @@
 #include "generate.h"
 #include "pgn.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 int test_depth = 0;
 
 void test(void) {
+#ifdef _WIN32
+	SetConsoleOutputCP(CP_UTF8);
+#endif
     test_wrapper(test_common);
     test_wrapper(test_piece);
     test_wrapper(test_board);

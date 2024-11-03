@@ -1,31 +1,62 @@
 cmake_minimum_required(VERSION 3.5)
 project (chess)
 
-if(NOT MSVC)
-  set(CMAKE_C_COMPILER "gcc-13")
-endif()
-set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD 17)
 
 include_directories(${chess_SOURCE_DIR}/include)
-add_subdirectory(src)
 
-file(GLOB SOURCES "src/*.c")
-add_executable(chess ${SOURCES}
-        include/board.h
-        include/common.h
-        include/core.h
-        include/generate.h
-        include/move.h
-        include/pgn.h
-        include/piece.h
-        include/tests.h
-        include/utils.h
+add_executable(chess
+    src/main.c
+    src/board.c
+    src/common.c
+    src/generate.c
+    src/move.c
+    src/pgn.c
+    src/piece.c
+    src/tests.c
+    src/utils.c
 )
 
-if(MSVC)
-  target_compile_options(chess PRIVATE /W4 /WX)
-else()
-  target_compile_options(chess PRIVATE -Wall -Wextra -Wpedantic -Werror)
+set(HEADER_FILES
+  include/board.h
+  include/common.h
+  include/core.h
+  include/generate.h
+  include/move.h
+  include/pgn.h
+  include/piece.h
+  include/tests.h
+  include/utils.h
+)
+
+target_sources(chess PRIVATE ${HEADER_FILES})
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG")
+function(set_compiler_flags target)
+    if(MSVC)
+        # Debug flags
+        target_compile_options(${target} PRIVATE 
+            $<$<CONFIG:Debug>:/Od /Zi /RTC1 /W4>
+        )
+        
+        # Release flags
+        target_compile_options(${target} PRIVATE 
+            $<$<CONFIG:Release>:/O2 /Oi /GL>
+        )
+    else() # Linux - GCC/Clang
+        # Debug flags
+        target_compile_options(${target} PRIVATE 
+            $<$<CONFIG:Debug>:-O0 -g3 -Wall -Wextra -Wpedantic -Werror>
+        )
+        
+        # Release flags
+        target_compile_options(${target} PRIVATE 
+            $<$<CONFIG:Release>:-O3 -march=native -DNDEBUG>
+        )
+    endif()
+endfunction()
+
+set_compiler_flags(chess)

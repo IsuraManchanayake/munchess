@@ -4,6 +4,14 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#else
+#include <sys/time.h>
+#endif
+
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b));
 #endif
@@ -33,11 +41,23 @@ int rand_range(int a, int b) {
 }
 
 time_t time_now(void) {
-  struct timeval tv;
-  time_t full_time;
-  gettimeofday(&tv, NULL);
-  full_time = tv.tv_sec * 1000000 + tv.tv_usec;
-  return full_time;
+#ifdef _WIN32
+    static uint64_t is_init = 0;
+    static LARGE_INTEGER win_frequency;
+    if (0 == is_init) {
+        QueryPerformanceFrequency(&win_frequency);
+        is_init = 1;
+    }
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    return (uint64_t)((1e6 * now.QuadPart) / win_frequency.QuadPart);
+#else
+    struct timeval tv;
+    time_t full_time;
+    gettimeofday(&tv, NULL);
+    full_time = tv.tv_sec * 1000000 + tv.tv_usec;
+    return full_time;
+#endif
 }
 
 char* read_file(const char* path) {
@@ -62,3 +82,16 @@ char* read_file(const char* path) {
 void error_exit(int status) {
     exit(status);
 }
+
+#if __STDC_VERSION__ < 202311L
+char* strndup(const char* str, size_t n) {
+    size_t l = strlen(str);
+    l = min(l, n);
+    char* new = malloc(l + 1);
+    if (new == NULL) {
+        return NULL;
+    }
+    new[l] = '\0';
+    return (char*)memcpy(new, str, l);
+}
+#endif
