@@ -29,3 +29,28 @@
 #define FR_TO_IDX(f, r) IDX(r - 1, simple(f) - 'a')
 #define FR_TO_COORD(f, r) {f, dtoc(r), 0}
 #define FR_TO_YX(f, r) {r - 1, simple(f) - 'a'}
+
+#define ATyx(board, y, x) ((board)->pieces[IDX((y), (x))])
+#define ATcoord(board, coord) ((board)->pieces[COORD_TO_IDX(coord)])
+#define ATidx(board, pos) ((board)->pieces[pos])
+#define ATfr(board, file, rank) ATyx((board), (rank) - 1, simple(file) - 'a')
+
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b));
+#endif
+#ifndef max
+#define max(a, b) ((a) < (b) ? (b) : (a));
+#endif
+
+#if (defined(__GNUC__) || defined(__clang__)) && (__STDC_VERSION__ >= 201710L)
+#define UNDERLYING(Type) :uint8_t
+#define ENUM_BITS(Type, name, bits) Type name: bits
+#else
+#define UNDERLYING(Type) 
+#define ENUM_BITS(Type, name, bits) uint8_t name: bits
+#endif
+
+#define debugzu(x) (printf("%s = %zu\n", #x, (x)))
+#define debugi(x) (printf("%s = %d\n", #x, (x)))
+#define debugc(x) (printf("%s = %c\n", #x, (x)))
+#define debugs(x) (printf("%s = %s\n", #x, (x)))

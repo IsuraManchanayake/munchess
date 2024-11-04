@@ -24,7 +24,7 @@ add_library(chess_lib STATIC
 set(HEADER_FILES
     include/board.h
     include/common.h
-    include/core.h
+    include/defs.h
     include/generate.h
     include/move.h
     include/pgn.h

@@ -1,10 +1,10 @@
+#include <string.h>
+
 #include "generate.h"
 #include "utils.h"
-#include "core.h"
+#include "defs.h"
 #include "board.h"
 #include "tests.h"
-
-#include <string.h>
 
 void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *king_idx) {
     int dir = move_direction(color);
@@ -298,8 +298,8 @@ void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
                 && board->pieces[dest].type != KING) {
             size_t dest_y= IDX_Y(dest);
             if ((dest_y == 7 && piece.color == WHITE) || (dest_y == 0 && piece.color == BLACK)) {
-                for (size_t i = 0; i < sizeof(possible_promotions) / sizeof(possible_promotions[0]); ++i) {
-                    Move promotion_move = move_create(piece, idx, dest, CAPTURE | PROMOTION, possible_promotions[i], board->pieces[dest].type);
+                for (size_t j = 0; j < sizeof(possible_promotions) / sizeof(possible_promotions[0]); ++j) {
+                    Move promotion_move = move_create(piece, idx, dest, CAPTURE | PROMOTION, possible_promotions[j], board->pieces[dest].type);
                     validate_and_push_move(board, moves, promotion_move, king_idx);
                 }
             } else {
@@ -598,7 +598,7 @@ Move notation_to_move(const char *notation, Board *board) {
     generate_moves(board, moves);
     time_t end_time = time_now();
     double diff_ms = (end_time - start_time) / 1000.0;
-    printf("Time for generating moves: %f ms\n", diff_ms);
+    //printf("Time for generating moves: %f ms\n", diff_ms);
 
     const char *c = notation;
     size_t len = strlen(c);

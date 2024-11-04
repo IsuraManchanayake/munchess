@@ -2,7 +2,7 @@
 
 #include "board.h"
 
-extern const char *c;
+extern const char *stream;
 extern size_t line_n;
 extern size_t col_n;
 

@@ -1,10 +1,10 @@
-#include "board.h"
-#include "core.h"
-#include "utils.h"
-#include "tests.h"
-
 #include <assert.h>
 #include <string.h>
+
+#include "board.h"
+#include "defs.h"
+#include "utils.h"
+#include "tests.h"
 
 bool idx_is_safe(size_t idx) {
     return idx < 64;
@@ -24,11 +24,6 @@ Piece board_safe_at(const Board *board, size_t idx) {
 void set_piece_null(Piece *piece) {
     piece->data = 0;
 }
-
-#define ATyx(board, y, x) ((board)->pieces[IDX((y), (x))])
-#define ATcoord(board, coord) ((board)->pieces[COORD_TO_IDX(coord)])
-#define ATidx(board, pos) ((board)->pieces[pos])
-#define ATfr(board, file, rank) ATyx((board), (rank) - 1, simple(file) - 'a')
 
 Board *board_create(void) {
     Board *board = (Board *)arena_allocate(&arena, sizeof(Board));

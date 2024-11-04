@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #define REGION_SIZE 1024
+#define DA_INITIAL_CAPACITY 1
 
 typedef struct Region Region;
 
@@ -47,8 +48,6 @@ typedef struct DAi32 {
     size_t size;
     size_t capacity;
 } DAi32;  // Dynamic array uint32_t
-
-#define DA_INITIAL_CAPACITY 1
 
 DA *da_create(void);
 

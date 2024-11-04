@@ -1,20 +1,13 @@
-#include "common.h"
-#include "tests.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <assert.h>
 
-#ifndef min
-#define min(a, b) ((a) < (b) ? (a) : (b));
-#endif
-#ifndef max
-#define max(a, b) ((a) < (b) ? (b) : (a));
-#endif
+#include "common.h"
+#include "tests.h"
 
-#define REGION_SIZE 1024
+Arena arena = { 0 };
 
 Region *region_create(size_t size) {
     size_t capacity = max(size, REGION_SIZE);
@@ -87,10 +80,6 @@ size_t n_regions(Arena *arena) {
     }
     return c;
 }
-
-Arena arena = {0};
-
-#define DA_INITIAL_CAPACITY 1
 
 DA *da_create(void) {
     DA *da = arena_allocate(&arena, sizeof(DA));
@@ -210,11 +199,6 @@ void _buf_printf(DA *da, const char* fmt, ...) {
     da->size += len - 1;
     va_end(args);
 }
-
-#define buf_printf(da, fmt, ...) \
-    do { \
-        _buf_printf((da), (fmt), __VA_ARGS__); \
-    } while(0)
 
 // ======================================
 

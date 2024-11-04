@@ -3,14 +3,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "utils.h"
+#include "defs.h"
 
-typedef UCHAR_ENUM {
-    WHITE,
+typedef enum Color UNDERLYING(uint8_t) {
+    WHITE=0,
     BLACK,
 } Color;
 
-typedef UCHAR_ENUM {
+typedef enum PieceType UNDERLYING(uint8_t) {
     NONE=0,
     PAWN,
     KNIGHT,

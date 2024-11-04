@@ -1,11 +1,11 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "piece.h"
 #include "common.h"
 
-#include <stdbool.h>
-
-typedef UCHAR_ENUM {
+typedef enum MoveType UNDERLYING(uint8_t) {
     NORMAL=0,
     CAPTURE=1<<0,
     EN_PASSANT=1<<1,

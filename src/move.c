@@ -1,10 +1,10 @@
-#include "move.h"
-#include "common.h"
-#include "core.h"
-#include "tests.h"
-
 #include <stdbool.h>
 #include <string.h>
+
+#include "move.h"
+#include "common.h"
+#include "defs.h"
+#include "tests.h"
 
 bool move_is_type_of(Move move, MoveType type) {
     return move.move_type_mask & type;

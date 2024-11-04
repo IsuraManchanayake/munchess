@@ -1,14 +1,14 @@
-#include "pgn.h"
-#include "generate.h"
-#include "utils.h"
-#include "tests.h"
-
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-const char *c = NULL;
+#include "pgn.h"
+#include "generate.h"
+#include "utils.h"
+#include "tests.h"
+
+const char *stream = NULL;
 size_t line_n = 1;
 size_t col_n = 1;
 
@@ -34,26 +34,26 @@ void parse_error_exit(const char *msg) {
 }
 
 void start_parsing(const char *str) {
-    c = str;
+    stream = str;
     line_n = 1;
     col_n = 1;
 }
 
 void next_char(void) {
-    if (*c == '\0') {
+    if (*stream == '\0') {
         printf("line: %zu:%zu | Reached EOF while parsing\n", line_n, col_n);
         error_exit(-1);
     }
-    if (*c == '\n') {
+    if (*stream == '\n') {
         ++line_n;
         col_n = 0;
     }
-    ++c;
+    ++stream;
     ++col_n;
 }
 
 bool soft_expect(char expected) {
-    if (*c != expected) {
+    if (*stream != expected) {
         return false;
     }
     next_char();
@@ -62,7 +62,7 @@ bool soft_expect(char expected) {
 
 void expect(char expected) {
     if (!soft_expect(expected)) {
-        printf("line: %zu:%zu | Expected %c, found '%c'\n", line_n, col_n, expected, *c);
+        printf("line: %zu:%zu | Expected %c, found '%c'\n", line_n, col_n, expected, *stream);
         error_exit(-1);
     }
 }
@@ -78,13 +78,13 @@ bool soft_expect_range(char begin, char end) {
 
 void expect_range(char begin, char end) {
     if (!soft_expect_range(begin, end)) {
-        printf("line: %zu:%zu | Expected [%c, %c], found '%c'\n", line_n, col_n, begin, end, *c);
+        printf("line: %zu:%zu | Expected [%c, %c], found '%c'\n", line_n, col_n, begin, end, *stream);
         error_exit(-1);
     }
 }
 
 bool soft_expect_fn(bool (*f)(char)) {
-    if (f(*c)) {
+    if (f(*stream)) {
         next_char();
         return true;
     }
@@ -93,13 +93,13 @@ bool soft_expect_fn(bool (*f)(char)) {
 
 void expect_fn(bool (*f)(char)) {
     if (!soft_expect_fn(f)) {
-        printf("line: %zu:%zu | %c does not satisfy the function\n", line_n, col_n, *c);
+        printf("line: %zu:%zu | %c does not satisfy the function\n", line_n, col_n, *stream);
         error_exit(-1);
     }
 }
 
 bool soft_expect_str(const char *str) {
-    const char *ct = c;
+    const char *ct = stream;
     while (*str) {
         if (*ct != *str) {
             return false;
@@ -107,7 +107,7 @@ bool soft_expect_str(const char *str) {
         ++ct;
         ++str;
     }
-    c = ct;
+    stream = ct;
     return true;
 }
 
@@ -137,7 +137,7 @@ void scan_numeric(void) {
 }
 
 size_t scan_move_repr(void) {
-    const char *start = c;
+    const char *start = stream;
     if (soft_expect('O')) {
         expect('-');
         expect('O');
@@ -182,7 +182,7 @@ size_t scan_move_repr(void) {
     if (!soft_expect('+')) {
         soft_expect('#');
     }
-    return c - start;
+    return stream - start;
 }
 
 void parse_pgn(const char *path, DA *move_strs) {
@@ -203,7 +203,7 @@ void parse_pgn(const char *path, DA *move_strs) {
     }
 
     bool draw = false;
-    Color winning_color;
+    Color winning_color = WHITE;
     while (true) {
         scan_numeric();
         skip_whitespace();
@@ -215,7 +215,7 @@ void parse_pgn(const char *path, DA *move_strs) {
         bool game_over = false;
         while(moves_per_line-- > 0) {
             size_t move_len = scan_move_repr();
-            char *move_str = strndup(c - move_len, move_len);
+            char *move_str = strndup(stream - move_len, move_len);
             // debugs(move_str);
             // free(move_str);
             da_push(move_strs, (void *) move_str);
@@ -241,15 +241,15 @@ void parse_pgn(const char *path, DA *move_strs) {
         }
     }
 
-    if (draw) {
-        printf("DRAW\n");
-    } else {
-        if (winning_color == WHITE) {
-            printf("WHITE won\n");
-        } else {
-            printf("BLACK won\n");
-        }
-    }
+    //if (draw) {
+    //    printf("DRAW\n");
+    //} else {
+    //    if (winning_color == WHITE) {
+    //        printf("WHITE won\n");
+    //    } else {
+    //        printf("BLACK won\n");
+    //    }
+    //}
 
     free((void *)str);
 }
@@ -276,11 +276,17 @@ void test_read_pgn(void) {
         }
     }
     
-    DA *board_da = da_create();
-    board_buf_write(board, board_da);
-    printf("%s\n", (char *) board_da->data);
+    //DA *board_da = da_create();
+    //board_buf_write(board, board_da);
+    //printf("%s\n", (char *) board_da->data);
 
-    da_free(board_da);
+	DA* fen_da = da_create();
+    char* fen = board_to_fen(board, fen_da);
+
+	assert(strcmp(fen, "8/nk2bp2/p3b1p1/Pp1pPpP1/1P1P1P2/1KBN4/2N5/8 w - - 0 44") == 0);
+
+    da_free(fen_da);
+    //da_free(board_da);
     da_free(move_strs);
 }
 

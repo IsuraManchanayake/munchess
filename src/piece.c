@@ -1,7 +1,6 @@
 #include "piece.h"
-
 #include "common.h"
-#include "core.h"
+#include "defs.h"
 #include "tests.h"
 
 Piece piece_create(Color color, PieceType type) {
@@ -17,7 +16,7 @@ bool is_piece_null(Piece piece) {
 }
 
 char piece_type_repr(PieceType type) {
-    if (type <= KING) {
+    if (NONE <= type && type <= KING) {
         return " pnbrqk"[(size_t)type];
     }
     return ' ';
