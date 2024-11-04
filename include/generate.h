@@ -23,12 +23,8 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves);
 
 void generate_moves(Board *board, DAi32 *moves);
 
-Move notation_to_move(const char *notation, Board *board);
-
 // ==================================
 
 void test_generate_initial_moves(void);
-
-void test_notation_to_move(void);
 
 void test_generate(void);

@@ -38,6 +38,8 @@ char piece_type_repr(PieceType type);
 
 PieceType char_to_piece_type(char c);
 
+Piece char_to_piece(char c);
+
 char piece_repr_base(Color color, PieceType type);
 
 char piece_repr(Piece piece);

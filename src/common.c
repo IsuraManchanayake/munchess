@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "tests.h"
+#include "defs.h"
 
 Arena arena = { 0 };
 

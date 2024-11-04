@@ -12,6 +12,8 @@ typedef struct Board {
     size_t first_queen_rook_move[2];
     size_t last_pawn_move[2];
     size_t last_capture_move[2];
+    size_t initial_half_move_clock;
+    size_t half_move_counter;
     Color to_move;
 } Board;
 
@@ -37,6 +39,10 @@ void undo_last_move(Board *board);
 
 char *board_to_fen(Board *board, DA *da);
 
+Move notation_to_move(const char *notation, Board *board);
+
+Board *fen_to_board(char *fen);
+
 char *board_buf_write(Board *board, DA *da);
 
 // ===========================================
@@ -46,4 +52,6 @@ void test_board_display(void);
 void test_apply_move(void);
 void test_undo_last_move(void);
 void test_board_to_fen(void);
+void test_fen_to_board(void);
+void test_notation_to_move(void);
 void test_board(void);

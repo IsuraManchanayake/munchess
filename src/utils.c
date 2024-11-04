@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "utils.h"
+#include "defs.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

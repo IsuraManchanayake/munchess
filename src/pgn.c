@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "pgn.h"
+#include "board.h"
 #include "generate.h"
 #include "utils.h"
 #include "tests.h"
@@ -11,6 +12,14 @@
 const char *stream = NULL;
 size_t line_n = 1;
 size_t col_n = 1;
+
+PGNGame *pgn_game_create_empty() {
+    PGNGame *pgn_game = (PGNGame *) arena_allocate(&arena, sizeof(PGNGame));
+    pgn_game->move_strs = da_create();
+    pgn_game->draw = false;
+    pgn_game->winning_color = WHITE;
+    return pgn_game;
+}
 
 bool is_whitespace(char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
@@ -185,7 +194,7 @@ size_t scan_move_repr(void) {
     return stream - start;
 }
 
-void parse_pgn(const char *path, DA *move_strs) {
+PGNGame *parse_pgn(const char *path) {
     char *str = read_file(path);
     start_parsing(str);
     
@@ -202,8 +211,7 @@ void parse_pgn(const char *path, DA *move_strs) {
         expect(']');
     }
 
-    bool draw = false;
-    Color winning_color = WHITE;
+    PGNGame *pgn_game = pgn_game_create_empty();
     while (true) {
         scan_numeric();
         skip_whitespace();
@@ -218,21 +226,21 @@ void parse_pgn(const char *path, DA *move_strs) {
             char *move_str = strndup(stream - move_len, move_len);
             // debugs(move_str);
             // free(move_str);
-            da_push(move_strs, (void *) move_str);
+            da_push(pgn_game->move_strs, (void *) move_str);
             
             skip_whitespace();
 
             if (soft_expect_str("1-0")) {
                 game_over = true;
-                winning_color = WHITE;
+                pgn_game->winning_color = WHITE;
                 break;
             } else if (soft_expect_str("0-1")) {
                 game_over = true;
-                winning_color = BLACK;
+                pgn_game->winning_color = BLACK;
                 break;
             } else if (soft_expect_str("1/2-1/2")) {
                 game_over = true;
-                draw = true;
+                pgn_game->draw = true;
                 break;
             }
         }
@@ -252,22 +260,22 @@ void parse_pgn(const char *path, DA *move_strs) {
     //}
 
     free((void *)str);
+    return pgn_game;
 }
 
 // ==========================
 
 void test_read_pgn(void) {
-    DA *move_strs = da_create();
-    parse_pgn("../res/tests/game-1.pgn", move_strs);
+    PGNGame *pgn_game = parse_pgn("../res/tests/game-1.pgn");
 
     Board *board = board_create();
     place_initial_pieces(board);
-    for (size_t i = 0; i < move_strs->size; ++i) {
+    for (size_t i = 0; i < pgn_game->move_strs->size; ++i) {
         // if (i == 91) {
         //     volatile int m = 0;
         //     ++m;
         // }
-        const char *move_str = (const char *) move_strs->data[i];
+        const char *move_str = (const char *) pgn_game->move_strs->data[i];
         Move move = notation_to_move(move_str, board);
         if (!is_move_null(move)) {
             apply_move(board, move);
@@ -275,21 +283,82 @@ void test_read_pgn(void) {
             assert(0);
         }
     }
+
+	DA* fen_da_1 = da_create();
+    char* fen_1 = board_to_fen(board, fen_da_1);
+
+	assert(strcmp(fen_1, "8/nk2bp2/p3b1p1/Pp1pPpP1/1P1P1P2/1KBN4/2N5/8 w - - 0 44") == 0);
+
+    for (size_t i = 0, s = board->moves->size; i < s; ++i) {
+        // DA *move_da = da_create();
+        // move_buf_write(move_data_create(board->moves->data[board->moves->size - 1]), move_da);
+        // printf("%s\n", (char *) move_da->data);
+        // da_free(move_da);
+        
+        undo_last_move(board);
+
+        // DA *board_da = da_create();
+        // board_buf_write(board, board_da);
+        // printf("%s\n", (char *) board_da->data);
+        // da_free(board_da);
+        
+        // getchar();
+    }
     
-    //DA *board_da = da_create();
-    //board_buf_write(board, board_da);
-    //printf("%s\n", (char *) board_da->data);
+    // DA *board_da = da_create();
+    // board_buf_write(board, board_da);
+    // printf("%s\n", (char *) board_da->data);
+    
+	DA* fen_da_2 = da_create();
+    char* fen_2 = board_to_fen(board, fen_da_2);
+    // debugs(fen_2);
+	assert(strcmp(fen_2, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") == 0);
 
-	DA* fen_da = da_create();
-    char* fen = board_to_fen(board, fen_da);
+    da_free(fen_da_2);
+    da_free(fen_da_1);
+    // da_free(board_da);
+}
 
-	assert(strcmp(fen, "8/nk2bp2/p3b1p1/Pp1pPpP1/1P1P1P2/1KBN4/2N5/8 w - - 0 44") == 0);
+void test_pgn_with_fen(void) {
+    Board *board = board_create();
+    place_initial_pieces(board);
 
-    da_free(fen_da);
-    //da_free(board_da);
-    da_free(move_strs);
+    PGNGame *pgn_game = parse_pgn("../res/tests/game-1.pgn");
+
+    DA *fens_da = da_create();
+    for (size_t i = 0; i < pgn_game->move_strs->size; ++i) {
+        Move move = notation_to_move(pgn_game->move_strs->data[i], board);
+        apply_move(board, move);
+        DA *fen_da = da_create();
+        board_to_fen(board, fen_da);
+        da_push(fens_da, (void *) strdup((char *)fen_da->data));
+        da_free(fen_da);
+    }
+
+    for (size_t i = 8; i < fens_da->size; ++i) {
+        char *original_fen = (char *) fens_da->data[i];
+        board = fen_to_board(original_fen);
+
+        DA *fen_da =  da_create();
+        char *derived_fen = board_to_fen(board, fen_da);
+        assert(strcmp(original_fen, derived_fen) == 0);
+        da_free(fen_da);
+
+        for (size_t j = i + 1; j < pgn_game->move_strs->size; ++j) {
+            Move move = notation_to_move(pgn_game->move_strs->data[j], board);
+            apply_move(board, move);
+        }
+        
+        DA *fen_da_2 =  da_create();
+        char *derived_fen_2 = board_to_fen(board, fen_da_2);
+        assert(strcmp(fens_da->data[fens_da->size - 1], derived_fen_2) == 0);
+        da_free(fen_da_2);
+    }
+
+    da_free(fens_da);
 }
 
 void test_pgn(void) {
     test_wrapper(test_read_pgn);
+    test_wrapper(test_pgn_with_fen);
 }

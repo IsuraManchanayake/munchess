@@ -7,7 +7,11 @@ include_directories(${chess_SOURCE_DIR}/include)
 cmake_minimum_required(VERSION 3.5)
 project(chess)
 
-set(CMAKE_C_STANDARD 17)
+if(MSVC)
+    set(CMAKE_C_STANDARD 17)
+else()
+    set(CMAKE_C_STANDARD 23)
+endif()
 
 include_directories(${chess_SOURCE_DIR}/include)
 

@@ -35,6 +35,24 @@ PieceType char_to_piece_type(char c) {
     }
 }
 
+Piece char_to_piece(char c) {
+    switch(c) {
+        case 'k': return piece_create(BLACK, KING);
+        case 'q': return piece_create(BLACK, QUEEN);
+        case 'r': return piece_create(BLACK, ROOK);
+        case 'b': return piece_create(BLACK, BISHOP);
+        case 'n': return piece_create(BLACK, KNIGHT);
+        case 'p': return piece_create(BLACK, PAWN);
+        case 'K': return piece_create(WHITE, KING);
+        case 'Q': return piece_create(WHITE, QUEEN);
+        case 'R': return piece_create(WHITE, ROOK);
+        case 'B': return piece_create(WHITE, BISHOP);
+        case 'N': return piece_create(WHITE, KNIGHT);
+        case 'P': return piece_create(WHITE, PAWN);
+        default: return piece_create(WHITE, NONE);
+    }
+}
+
 char piece_repr_base(Color color, PieceType type) {
     if (type == NONE) {
         return ' ';
