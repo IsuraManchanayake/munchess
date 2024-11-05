@@ -18,36 +18,40 @@ include_directories(${chess_SOURCE_DIR}/include)
 add_library(chess_lib STATIC
     src/board.c
     src/common.c
+    src/engine.c
     src/generate.c
     src/move.c
     src/pgn.c
     src/piece.c
+    src/uci.c
     src/utils.c
 )
 
 set(HEADER_FILES
     include/board.h
     include/common.h
+    include/engine.h
     include/defs.h
     include/generate.h
     include/move.h
     include/pgn.h
     include/piece.h
     include/tests.h
+    include/uci.h
     include/utils.h
 )
 
 target_sources(chess_lib PRIVATE ${HEADER_FILES})
 
-add_executable(engine
-    src/engine.c
+add_executable(munchess
+    src/munchess.c
 )
 
 add_executable(tests
     src/tests.c
 )
 
-target_link_libraries(engine PRIVATE chess_lib)
+target_link_libraries(munchess PRIVATE chess_lib)
 target_link_libraries(tests PRIVATE chess_lib)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -79,7 +83,7 @@ function(set_compiler_flags target)
 endfunction()
 
 set_compiler_flags(chess_lib)
-set_compiler_flags(engine)
+set_compiler_flags(munchess)
 set_compiler_flags(tests)
 
 set(RESOURCE_FILES

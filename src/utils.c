@@ -39,7 +39,7 @@ time_t time_now(void) {
     }
     LARGE_INTEGER now;
     QueryPerformanceCounter(&now);
-    return (uint64_t)((1e6 * now.QuadPart) / win_frequency.QuadPart);
+    return (uint64_t)((1000000 * now.QuadPart) / win_frequency.QuadPart);
 #else
     struct timeval tv;
     time_t full_time;
