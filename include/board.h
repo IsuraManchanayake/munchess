@@ -41,7 +41,7 @@ char *board_to_fen(Board *board, DA *da);
 
 Move notation_to_move(const char *notation, Board *board);
 
-Board *fen_to_board(char *fen);
+void fen_to_board(char *fen, Board *board);
 
 char *board_buf_write(Board *board, DA *da);
 

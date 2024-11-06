@@ -14,7 +14,7 @@ int test_depth = 0;
 
 void test(void) {
 #ifdef _WIN32
-	SetConsoleOutputCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
 #endif
     test_wrapper(test_common);
     test_wrapper(test_piece);

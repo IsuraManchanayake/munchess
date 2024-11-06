@@ -2,6 +2,6 @@
 
 int test_depth = 0;
 int main() {
-	start_uci();
-	return 0;
+    start_uci();
+    return 0;
 }

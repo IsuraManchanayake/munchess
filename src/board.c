@@ -317,8 +317,8 @@ char *board_to_fen(Board *board, DA *da) {
     return (char *) da->data;
 }
 
-Board *fen_to_board(char *fen) {
-    Board *board = board_create();
+void fen_to_board(char *fen, Board *board) {
+    board->moves->size = 0;
     size_t idx = 0;
     while (*fen) {
         if ('1' <= *fen && *fen <= '8') {
@@ -432,7 +432,6 @@ Board *fen_to_board(char *fen) {
     board->last_pawn_move[BLACK] = board->half_move_counter - board->initial_half_move_clock;
     board->last_capture_move[WHITE] = board->half_move_counter - board->initial_half_move_clock;
     board->last_capture_move[BLACK] = board->half_move_counter - board->initial_half_move_clock;
-    return board;
 }
 
 void generate_moves(Board *board, DAi32 *moves);
@@ -758,7 +757,7 @@ void test_fen_to_board(void) {
     for (size_t i = 8; i < fens_da->size; ++i) {
         char *original_fen = (char *) fens_da->data[i];
         // debugs(original_fen);
-        board = fen_to_board(original_fen);
+        fen_to_board(original_fen, board);
 
         DA *fen_da =  da_create();
         char *derived_fen = board_to_fen(board, fen_da);

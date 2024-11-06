@@ -284,10 +284,10 @@ void test_read_pgn(void) {
         }
     }
 
-	DA* fen_da_1 = da_create();
+    DA* fen_da_1 = da_create();
     char* fen_1 = board_to_fen(board, fen_da_1);
 
-	assert(strcmp(fen_1, "8/nk2bp2/p3b1p1/Pp1pPpP1/1P1P1P2/1KBN4/2N5/8 w - - 0 44") == 0);
+    assert(strcmp(fen_1, "8/nk2bp2/p3b1p1/Pp1pPpP1/1P1P1P2/1KBN4/2N5/8 w - - 0 44") == 0);
 
     for (size_t i = 0, s = board->moves->size; i < s; ++i) {
         // DA *move_da = da_create();
@@ -309,10 +309,10 @@ void test_read_pgn(void) {
     // board_buf_write(board, board_da);
     // printf("%s\n", (char *) board_da->data);
     
-	DA* fen_da_2 = da_create();
+    DA* fen_da_2 = da_create();
     char* fen_2 = board_to_fen(board, fen_da_2);
     // debugs(fen_2);
-	assert(strcmp(fen_2, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") == 0);
+    assert(strcmp(fen_2, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") == 0);
 
     da_free(fen_da_2);
     da_free(fen_da_1);
@@ -337,7 +337,7 @@ void test_pgn_with_fen(void) {
 
     for (size_t i = 8; i < fens_da->size; ++i) {
         char *original_fen = (char *) fens_da->data[i];
-        board = fen_to_board(original_fen);
+        fen_to_board(original_fen, board);
 
         DA *fen_da =  da_create();
         char *derived_fen = board_to_fen(board, fen_da);
