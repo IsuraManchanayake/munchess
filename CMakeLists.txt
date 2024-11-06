@@ -21,6 +21,7 @@ add_library(chess_lib STATIC
     src/engine.c
     src/generate.c
     src/move.c
+    src/parser.c
     src/pgn.c
     src/piece.c
     src/uci.c
@@ -34,6 +35,7 @@ set(HEADER_FILES
     include/defs.h
     include/generate.h
     include/move.h
+    include/parser.h
     include/pgn.h
     include/piece.h
     include/tests.h

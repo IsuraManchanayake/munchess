@@ -5,6 +5,7 @@
 #include "move.h"
 #include "generate.h"
 #include "pgn.h"
+#include "engine.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -22,6 +23,7 @@ void test(void) {
     test_wrapper(test_move);
     test_wrapper(test_generate);
     test_wrapper(test_pgn);
+    test_wrapper(test_engine);
 
     arena_reset(&arena);
 }

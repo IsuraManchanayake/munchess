@@ -10,6 +10,10 @@
 #include "engine.h"
 #include "defs.h"
 #include "move.h"
+#include "piece.h"
+#include "parser.h"
+
+char *position_parser = NULL;
 
 UCI *uci_create(void) {
     UCI *uci = (UCI *) arena_allocate(&arena, sizeof(UCI));
@@ -28,18 +32,23 @@ void move_to_uci(Move move, char* uci_move_str) {
     uci_move_str[1] = from[1];
     uci_move_str[2] = to[0];
     uci_move_str[3] = to[1];
-    uci_move_str[4] = '\0';
+    if (move_is_type_of(move, PROMOTION)) {
+        uci_move_str[4] = piece_type_repr(move.promoted_type);
+        uci_move_str[5] = 0;
+    } else {
+        uci_move_str[4] = 0;
+    }
 }
 
-Move uci_to_move(char* uci, Board *board) {
-    size_t from = COORD_TO_IDX(uci);
-    size_t to = COORD_TO_IDX(uci + 2);
+Move uci_to_move(const char* uci_move_str, Board *board) {
+    size_t from = COORD_TO_IDX(uci_move_str);
+    size_t to = COORD_TO_IDX(uci_move_str + 2);
     Piece* piece = &board->pieces[from];
     uint8_t move_type_mask = NORMAL;
     PieceType promoted_type = NONE;
     PieceType captured_type = board->pieces[to].type;
 
-    size_t len = strlen(uci);
+    size_t len = strlen(uci_move_str);
     if (!is_piece_null(board->pieces[to])) {
         move_type_mask |= CAPTURE;
     }
@@ -59,7 +68,8 @@ Move uci_to_move(char* uci, Board *board) {
         }
         // Promotion
         if (len == 5) {
-            promoted_type = char_to_piece_type(uci[4]);
+			move_type_mask |= PROMOTION;
+            promoted_type = char_to_piece_type(uci_move_str[4]);
             assert(IDX_Y(to) == (7 + 7 * dir) / 2);
         }
     }
@@ -92,6 +102,24 @@ void curr_time(char *buffer) {
     strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
+void _uci_log_base(UCI *uci, const char *prefix, const char*fmt, va_list args) {
+    char buffer[26];
+    curr_time(buffer);
+
+    fprintf(uci->log_fp, "%.2s %s ", prefix, buffer);
+    vfprintf(uci->log_fp, fmt, args);
+    fprintf(uci->log_fp, "\n");
+    fflush(uci->log_fp);
+}
+
+void uci_log(UCI *uci, const char *prefix, const char *fmt, ...) {
+    va_list args;
+
+    va_start(args, fmt);
+    _uci_log_base(uci, prefix, fmt, args);
+    va_end(args);
+}
+
 void send_message(UCI *uci, const char *fmt, ...) {
     va_list args_1;
 
@@ -105,12 +133,14 @@ void send_message(UCI *uci, const char *fmt, ...) {
 
     char buffer[26];
     curr_time(buffer);
+
     va_start(args_2, fmt);
-    fprintf(uci->log_fp, "<  %s ", buffer);
-    vfprintf(uci->log_fp, fmt, args_2);
-    fprintf(uci->log_fp, "\n");
-    fflush(uci->log_fp);
-    va_start(args_2, end);
+    _uci_log_base(uci, "< ", fmt, args_2);
+    va_end(args_2);
+}
+
+void log_input(UCI *uci, const char *input) {
+    uci_log(uci, "> ", "%s", input);
 }
 
 void send_uci_ok(UCI *uci) {
@@ -127,40 +157,53 @@ void send_is_ready(UCI *uci) {
     }
 }
 
-void store_board(UCI *uci, char *fen) {
-    fen_to_board(fen, uci->board);
+const char *uci_store_board(UCI *uci, const char *fen) {
+    board_reset(uci->board);
+    return fen_to_board(fen, uci->board);
 }
 
+void parse_position_command(UCI *uci, const char *input) {
+    start_parsing(input);
 
-void process_position_command(UCI *uci, char *input) {
-    char *token = strtok(input, " ");
-    token = strtok(NULL, " ");
-    
-    if (match_cmd(token, "fen")) {
-        char fen[100] = {0};
-        token = strtok(NULL, " ");
-        while (token && !match_cmd(token, "moves")) {
-            strcat(fen, token);
-            strcat(fen, " ");
-            token = strtok(NULL, " ");
-        }
-        if (strlen(fen) > 0) {
-            fen[strlen(fen) - 1] = '\0';
-            store_board(uci, fen);
-        }
-    } else if (match_cmd(token, "startpos")) {
-        store_board(uci, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    expect_str("position");
+    skip_whitespace();
+
+    if (soft_expect_str("fen")) {
+        skip_whitespace();
+        const char* current = uci_store_board(uci, stream);
+        advance(current - stream);
+    } else if (soft_expect_str("startpos")) {
+        uci_store_board(uci, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    } else {
+        uci_log(uci, "##", "Expected fen or startpos but found %s", input);
+        exit(-1);
     }
-    
-    token = strtok(NULL, " ");
-    while (token != NULL) {
-        if (strlen(token) >= 4) {
-            token[4] = '\0';  // Ensure the move string is properly terminated
-            Move move = uci_to_move(token, uci->board);
+    skip_whitespace();
+    if (soft_expect_str("moves")) {
+        skip_whitespace();
+        while (*stream) {
+            const char *start = stream;
+            expect_range('a', 'h');
+            expect_range('1', '8');
+            expect_range('a', 'h');
+            expect_range('1', '8');
+            soft_expect_fn(is_promotable_piece);
+            char uci_move_str[6] = {0};
+            memcpy(uci_move_str, start, stream - start);
+
+            Move move = uci_to_move(uci_move_str, uci->board);
             apply_move(uci->board, move);
+
+            skip_whitespace();
+            if (*stream == 0) {
+                break;
+            }
         }
-        token = strtok(NULL, " ");
     }
+    DA *da = da_create();
+    char *fen = board_to_fen(uci->board, da);
+    uci_log(uci, "**", "fen = %s", fen);
+    da_free(da);
 }
 
 void send_best_move(UCI *uci) {
@@ -170,18 +213,6 @@ void send_best_move(UCI *uci) {
     move_to_uci(move, uci_move_str);
     apply_move(uci->board, move);
     send_message(uci, "bestmove %s", uci_move_str);
-}
-
-void log_input(UCI *uci, const char *input) {
-    time_t timer;
-    char buffer[26];
-    struct tm* tm_info;
-    timer = time(NULL);
-    tm_info = localtime(&timer);
-    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-
-    fprintf(uci->log_fp, " > %s %s", buffer, input);
-    fflush(uci->log_fp);
 }
 
 void start_uci(void) {
@@ -202,31 +233,7 @@ void start_uci(void) {
         } else if (match_cmd(input, "ucinewgame")) {
             continue;
         } else if (match_cmd(input, "position")) {
-            process_position_command(uci, input);
-
-            // char *token = strtok(input, " ");
-            // token = strtok(NULL, " ");
-            // if (match_cmd(token, "fen")) {
-            //     char fen[100];
-            //     fen[0] = '\0';
-                
-            //     token = strtok(NULL, " ");
-            //     while (token) {
-            //         strcat(fen, token);
-            //         strcat(fen, " ");
-            //         token = strtok(NULL, " ");
-            //     }
-                
-            //     fen[strlen(fen) - 1] = '\0';
-            //     store_board(uci, fen);
-            // } else if (match_cmd(token, "startpos")) {
-            //     store_board(uci, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-            // }
-            // // }
-            // else {
-            //     assert(0);
-            // }
-            // continue;
+            parse_position_command(uci, input);
         } else if (match_cmd(input, "go")) {
             send_best_move(uci);
         } else if (match_cmd(input, "stop")) {

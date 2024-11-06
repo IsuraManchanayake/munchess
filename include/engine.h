@@ -19,3 +19,8 @@ Engine *engine_create(void);
 void engine_start(Engine *engine);
 
 Move engine_best_move(Engine *engine, Board* board);
+
+// ================================
+
+void test_move_sequence(void);
+void test_engine(void);

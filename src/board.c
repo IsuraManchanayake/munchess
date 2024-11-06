@@ -28,8 +28,7 @@ void set_piece_null(Piece *piece) {
     piece->data = 0;
 }
 
-Board *board_create(void) {
-    Board *board = (Board *)arena_allocate(&arena, sizeof(Board));
+void board_reset(Board *board) {
     for(size_t i = 0; i < 8; ++i) {
         for(size_t j = 0; j < 8; ++j) {
             set_piece_null(&ATyx(board, i, j));
@@ -49,6 +48,11 @@ Board *board_create(void) {
     board->to_move = WHITE;
     board->initial_half_move_clock = 0;
     board->half_move_counter = 0;
+}
+
+Board *board_create(void) {
+    Board *board = (Board *)arena_allocate(&arena, sizeof(Board));
+    board_reset(board);
     return board;
 }
 
@@ -317,7 +321,7 @@ char *board_to_fen(Board *board, DA *da) {
     return (char *) da->data;
 }
 
-void fen_to_board(char *fen, Board *board) {
+const char *fen_to_board(const char *fen, Board *board) {
     board->moves->size = 0;
     size_t idx = 0;
     while (*fen) {
@@ -361,11 +365,11 @@ void fen_to_board(char *fen, Board *board) {
     bool w_queen_castle = false;
     bool b_king_castle = false;
     bool b_queen_castle = false;
-    char *start = fen;
+    const char *start = fen;
     while (*fen && *fen != ' ') {
         ++fen;
     }
-    for (char *c = start; c != fen; ++c) {
+    for (const char *c = start; c != fen; ++c) {
         if (*c == 'K') {
             w_king_castle = true;
         } else if (*c == 'Q') {
@@ -432,6 +436,7 @@ void fen_to_board(char *fen, Board *board) {
     board->last_pawn_move[BLACK] = board->half_move_counter - board->initial_half_move_clock;
     board->last_capture_move[WHITE] = board->half_move_counter - board->initial_half_move_clock;
     board->last_capture_move[BLACK] = board->half_move_counter - board->initial_half_move_clock;
+    return fen;
 }
 
 void generate_moves(Board *board, DAi32 *moves);

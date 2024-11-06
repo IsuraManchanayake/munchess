@@ -25,6 +25,8 @@ Piece board_safe_at(const Board *board, size_t idx);
 
 void set_piece_null(Piece *piece);
 
+void board_reset(Board *board);
+
 Board *board_create(void);
 
 void place_initial_pieces(Board *board);
@@ -41,7 +43,7 @@ char *board_to_fen(Board *board, DA *da);
 
 Move notation_to_move(const char *notation, Board *board);
 
-void fen_to_board(char *fen, Board *board);
+const char *fen_to_board(const char *fen, Board *board);
 
 char *board_buf_write(Board *board, DA *da);
 

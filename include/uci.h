@@ -22,23 +22,31 @@ typedef struct UCI {
     FILE *log_fp;
 } UCI;
 
-UCI *uci_create(void);
+extern char *position_parser;
 
-// UCIState engine_uci_state(void);
+UCI *uci_create(void);
 
 void update_uci_state(void);
 
 void move_to_uci(Move move, char* uci);
 
-Move uci_to_move(char* uci, Board* board);
+Move uci_to_move(const char* uci, Board* board);
 
 bool match_cmd(char *input, const char *cmd);
+
+void curr_time(char *buffer);
+
+void uci_log(UCI *uci, const char* prefix, const char *fmt, ...);
+
+void send_message(UCI *uci, const char *fmt, ...);
 
 void send_uci_ok(UCI *uci);
 
 void send_is_ready(UCI *uci);
 
-void store_board(UCI *uci, char *fen);
+const char *uci_store_board(UCI *uci, const char *fen);
+
+void parse_position_command(UCI *uci, const char *input);
 
 void send_best_move(UCI *uci);
 

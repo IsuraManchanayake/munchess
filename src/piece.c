@@ -1,5 +1,4 @@
 #include "piece.h"
-#include "common.h"
 #include "defs.h"
 #include "tests.h"
 
