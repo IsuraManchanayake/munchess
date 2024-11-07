@@ -26,7 +26,7 @@ UCI *uci_create(void) {
     return uci;
 }
 
-void move_to_uci(Move move, char* uci_move_str) {
+void move_to_uci(Move move, char *uci_move_str) {
     char from[] = IDX_TO_COORD(move.from);
     char to[] = IDX_TO_COORD(move.to);
     uci_move_str[0] = from[0];
@@ -41,63 +41,13 @@ void move_to_uci(Move move, char* uci_move_str) {
     }
 }
 
-Move uci_to_move(const char* uci_move_str, Board *board) {
-    size_t from = COORD_TO_IDX(uci_move_str);
-    size_t to = COORD_TO_IDX(uci_move_str + 2);
-    Piece* piece = &board->pieces[from];
-    uint8_t move_type_mask = NORMAL;
-    PieceType promoted_type = NONE;
-    PieceType captured_type = board->pieces[to].type;
-
-    size_t len = strlen(uci_move_str);
-    if (!is_piece_null(board->pieces[to])) {
-        move_type_mask |= CAPTURE;
-    }
-    int dir = move_direction(board->to_move);
-    if (piece->type == PAWN) {
-        if (board->moves->size > 0) {
-            Move last_move = move_data_create(board->moves->data[board->moves->size - 1]);
-            if (last_move.piece_type == PAWN) {
-                size_t last_move_from_y = IDX_Y(last_move.from);
-                size_t last_move_to_y = IDX_Y(last_move.to);
-                size_t last_move_x = IDX_X(last_move.from);
-                if (last_move_to_y + 2 * dir == last_move_from_y 
-                    && YX_TO_IDX(last_move_from_y - dir, last_move_x) == to) {
-                    move_type_mask |= EN_PASSANT;
-                }
-            }
-        }
-        // Promotion
-        if (len == 5) {
-			move_type_mask |= PROMOTION;
-            promoted_type = char_to_piece_type(uci_move_str[4]);
-            assert(IDX_Y(to) == (7 + 7 * dir) / 2);
-        }
-    }
-    if (piece->type == KING) {
-        if (from - to == 2 || to - from == 2) {
-            move_type_mask |= CASTLE;
-            assert(IDX_Y(from) == IDX_Y(to));
-            assert(IDX_Y(from) == (7 - 7 * dir) / 2);
-        }
-    }
-    return move_create(
-        *piece,
-        from,
-        to,
-        move_type_mask,
-        promoted_type,
-        captured_type
-    );
-}
-
 bool match_cmd(char *input, const char *cmd) {
     return strncmp(input, cmd, strlen(cmd)) == 0;
 }
 
 void curr_time(char *buffer) {
     time_t timer;
-    struct tm* tm_info;
+    struct tm *tm_info;
     timer = time(NULL);
     tm_info = localtime(&timer);
     strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
@@ -140,17 +90,17 @@ void send_message(UCI *uci, const char *fmt, ...) {
     va_end(args_2);
 }
 
-void log_input(UCI* uci, const char* input) {
+void log_input(UCI *uci, const char* input) {
     uci_log(uci, "> ", "%s", input);
 }
 
-void send_uci_ok(UCI* uci) {
+void send_uci_ok(UCI *uci) {
     send_message(uci, "id name %s", ENGINE_NAME);
     send_message(uci, "id author %s", ENGINE_AUTHOR);
     send_message(uci, "uciok");
 }
 
-void send_is_ready(UCI* uci) {
+void send_is_ready(UCI *uci) {
     engine_start(uci->engine);
     if (uci->engine->state == ENGINE_READY) {
         uci->state = UCI_READY;
@@ -158,13 +108,13 @@ void send_is_ready(UCI* uci) {
     }
 }
 
-const char* uci_store_board(UCI* uci, const char* fen) {
+const char *uci_store_board(UCI *uci, const char *fen) {
     dai32_free(uci->board->moves);
     board_reset(uci->board);
     return fen_to_board(fen, uci->board);
 }
 
-void parse_position_command(UCI* uci, const char* input) {
+void parse_position_command(UCI *uci, const char *input) {
     start_parsing(input);
 
     expect_str("position");
@@ -172,7 +122,7 @@ void parse_position_command(UCI* uci, const char* input) {
 
     if (soft_expect_str("fen")) {
         skip_whitespace();
-        const char* current = uci_store_board(uci, stream);
+        const char *current = uci_store_board(uci, stream);
         advance(current - stream);
     }
     else if (soft_expect_str("startpos")) {
@@ -186,7 +136,7 @@ void parse_position_command(UCI* uci, const char* input) {
     if (soft_expect_str("moves")) {
         skip_whitespace();
         while (*stream) {
-            const char* start = stream;
+            const char *start = stream;
             expect_range('a', 'h');
             expect_range('1', '8');
             expect_range('a', 'h');
@@ -195,7 +145,7 @@ void parse_position_command(UCI* uci, const char* input) {
             char uci_move_str[6] = { 0 };
             memcpy(uci_move_str, start, stream - start);
 
-            Move move = uci_to_move(uci_move_str, uci->board);
+            Move move = uci_notation_to_move(uci_move_str, uci->board);
             apply_move(uci->board, move);
 
             skip_whitespace();
@@ -204,13 +154,13 @@ void parse_position_command(UCI* uci, const char* input) {
             }
         }
     }
-    DA* da = da_create();
-    char* fen = board_to_fen(uci->board, da);
+    DA *da = da_create();
+    char *fen = board_to_fen(uci->board, da);
     uci_log(uci, "**", "fen = %s", fen);
     da_free(da);
 }
 
-void send_best_move(UCI* uci) {
+void send_best_move(UCI *uci) {
     Move move = engine_best_move(uci->engine, uci->board);
     char uci_move_str[6] = { 0 };
     uci->last_move = move;
@@ -220,9 +170,9 @@ void send_best_move(UCI* uci) {
 }
 
 void start_uci(void) {
-    UCI* uci = uci_create();
+    UCI *uci = uci_create();
 
-    char* input;
+    char *input;
     while (true) {
         if ((input = read_line(stdin)) == NULL) {
             break;

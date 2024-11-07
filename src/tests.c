@@ -27,8 +27,3 @@ void test(void) {
 
     arena_reset(&arena);
 }
-
-int main(void) {
-    test();
-    return 0;
-}

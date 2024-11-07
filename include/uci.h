@@ -28,15 +28,15 @@ UCI *uci_create(void);
 
 void update_uci_state(void);
 
-void move_to_uci(Move move, char* uci);
+void move_to_uci(Move move, char *uci);
 
-Move uci_to_move(const char* uci, Board* board);
+Move uci_notation_to_move(const char *uci, Board *board);
 
 bool match_cmd(char *input, const char *cmd);
 
 void curr_time(char *buffer);
 
-void uci_log(UCI *uci, const char* prefix, const char *fmt, ...);
+void uci_log(UCI *uci, const char *prefix, const char *fmt, ...);
 
 void send_message(UCI *uci, const char *fmt, ...);
 

@@ -18,7 +18,7 @@ Engine *engine_create(void);
 
 void engine_start(Engine *engine);
 
-Move engine_best_move(Engine *engine, Board* board);
+Move engine_best_move(Engine *engine, Board *board);
 
 // ================================
 

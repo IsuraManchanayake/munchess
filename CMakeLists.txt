@@ -24,8 +24,8 @@ add_library(chess_lib STATIC
     src/parser.c
     src/pgn.c
     src/piece.c
-    src/uci.c
     src/utils.c
+    src/tests.c
 )
 
 set(HEADER_FILES
@@ -39,18 +39,20 @@ set(HEADER_FILES
     include/pgn.h
     include/piece.h
     include/tests.h
-    include/uci.h
     include/utils.h
 )
 
 target_sources(chess_lib PRIVATE ${HEADER_FILES})
 
 add_executable(munchess
+    src/uci.c
     src/munchess.c
 )
 
+target_sources(munchess PRIVATE include/uci.h)
+
 add_executable(tests
-    src/tests.c
+    src/tests_main.c
 )
 
 target_link_libraries(munchess PRIVATE chess_lib)

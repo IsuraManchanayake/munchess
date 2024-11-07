@@ -439,7 +439,7 @@ const char *fen_to_board(const char *fen, Board *board) {
 
 void generate_moves(Board *board, DAi32 *moves);
 
-Move notation_to_move(const char *notation, Board *board) {
+Move san_notation_to_move(const char *notation, Board *board) {
     // TODO: Improve notation_to_move performance
     DAi32 *moves = dai32_create();
     Move rmove = (Move) {0};
@@ -571,6 +571,56 @@ Move notation_to_move(const char *notation, Board *board) {
     finalize:
     dai32_free(moves);
     return rmove;
+}
+
+Move uci_notation_to_move(const char *move_str, Board* board) {
+    size_t from = COORD_TO_IDX(move_str);
+    size_t to = COORD_TO_IDX(move_str + 2);
+    Piece* piece = &board->pieces[from];
+    uint8_t move_type_mask = NORMAL;
+    PieceType promoted_type = NONE;
+    PieceType captured_type = board->pieces[to].type;
+
+    size_t len = strlen(move_str);
+    if (!is_piece_null(board->pieces[to])) {
+        move_type_mask |= CAPTURE;
+    }
+    int dir = move_direction(board->to_move);
+    if (piece->type == PAWN) {
+        if (board->moves->size > 0) {
+            Move last_move = move_data_create(board->moves->data[board->moves->size - 1]);
+            if (last_move.piece_type == PAWN) {
+                size_t last_move_from_y = IDX_Y(last_move.from);
+                size_t last_move_to_y = IDX_Y(last_move.to);
+                size_t last_move_x = IDX_X(last_move.from);
+                if (last_move_to_y + 2 * dir == last_move_from_y
+                    && YX_TO_IDX(last_move_from_y - dir, last_move_x) == to) {
+                    move_type_mask |= EN_PASSANT;
+                }
+            }
+        }
+        // Promotion
+        if (len == 5) {
+            move_type_mask |= PROMOTION;
+            promoted_type = char_to_piece_type(move_str[4]);
+            assert(IDX_Y(to) == (7 + 7 * dir) / 2);
+        }
+    }
+    if (piece->type == KING) {
+        if (from - to == 2 || to - from == 2) {
+            move_type_mask |= CASTLE;
+            assert(IDX_Y(from) == IDX_Y(to));
+            assert(IDX_Y(from) == (7 - 7 * dir) / 2);
+        }
+    }
+    return move_create(
+        *piece,
+        from,
+        to,
+        move_type_mask,
+        promoted_type,
+        captured_type
+    );
 }
 
 char *board_buf_write(Board *board, DA *da) {
@@ -749,7 +799,7 @@ void test_fen_to_board(void) {
     };
     DA *fens_da = da_create();
     for (size_t i = 0; i < sizeof(moves) / sizeof(moves[0]); ++i) {
-        Move move = notation_to_move(moves[i], board);
+        Move move = san_notation_to_move(moves[i], board);
         apply_move(board, move);
         DA *fen_da = da_create();
         board_to_fen(board, fen_da);
@@ -769,7 +819,7 @@ void test_fen_to_board(void) {
         da_free(fen_da);
 
         for (size_t j = i + 1; j < sizeof(moves) / sizeof(moves[0]); ++j) {
-            Move move = notation_to_move(moves[j], board);
+            Move move = san_notation_to_move(moves[j], board);
             apply_move(board, move);
         }
         
@@ -784,7 +834,7 @@ void test_fen_to_board(void) {
     da_free(fens_da);
 }
 
-void test_notation_to_move(void) {
+void test_san_notation_to_move(void) {
     Board *board = board_create();
     place_initial_pieces(board);
 
@@ -798,7 +848,7 @@ void test_notation_to_move(void) {
         "Nc3", "O-O-O",
     };
     for (size_t i = 0; i < sizeof(moves) / sizeof(moves[0]); ++i) {
-        Move move = notation_to_move(moves[i], board);
+        Move move = san_notation_to_move(moves[i], board);
         assert(!is_move_null(move));
         apply_move(board, move);
 
@@ -841,6 +891,40 @@ void test_notation_to_move(void) {
     da_free(da_2);
 }
 
+void test_uci_notation_to_move(void) {
+    char* seq[] = {
+        "e2e3", "a7a6", "h2h4", "b7b5", "g2g3", "b8c6", "h1h2", "e7e5", "d1f3",
+        "a8a7", "f3f6", "c6e7", "c2c4", "b5c4", "f6d6", "g7g6", "d6c5", "h7h6",
+        "c5c7", "h8h7", "g1f3", "d7d6", "b1a3", "h7g7", "c7a7", "d8c7", "d2d4",
+        "e5e4", "f3e5", "a6a5", "e5c4", "e7c6"
+    };
+    Board* board = board_create();
+    place_initial_pieces(board);
+    for (size_t i = 0; i < sizeof(seq) / sizeof(seq[0]); ++i) {
+        Move move = uci_notation_to_move(seq[i], board);
+        apply_move(board, move);
+
+        //DA *board_da = da_create();
+        //char *board_buf = board_buf_write(board, board_da);
+        //printf("%s\n", board_buf);
+        //da_free(board_da);
+    }
+
+    DAi32* moves = dai32_create();
+    generate_moves(board, moves);
+    assert(moves->size == 35);
+    //for (size_t i = 0; i < moves->size; ++i) {
+    //	Move move = move_data_create(moves->data[i]);
+
+    //	DA *move_da = da_create();
+    //	char *move_buf = move_buf_write(move, move_da);
+    //	printf("%s\n", move_buf);
+    //	da_free(move_da);
+    //}
+
+    (void)seq;
+}
+
 void test_board(void) {
     test_wrapper(test_board_initial);
     test_wrapper(test_board_display);
@@ -848,5 +932,6 @@ void test_board(void) {
     test_wrapper(test_undo_last_move);
     test_wrapper(test_board_to_fen);
     test_wrapper(test_fen_to_board);
-    test_wrapper(test_notation_to_move);
+    test_wrapper(test_san_notation_to_move);
+    test_wrapper(test_uci_notation_to_move);
 }

@@ -181,7 +181,7 @@ uint32_t *dai32_last_elem(DAi32 *da) {
     return &(da->data[da->size - 1]);
 }
 
-void _buf_printf(DA *da, const char* fmt, ...) {
+void _buf_printf(DA *da, const char *fmt, ...) {
     va_list args;
 
     va_start(args, fmt);

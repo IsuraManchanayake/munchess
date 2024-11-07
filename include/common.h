@@ -73,7 +73,7 @@ void **da_last_elem(DA *da);
 
 uint32_t *dai32_last_elem(DAi32 *da);
 
-void _buf_printf(DA *da, const char* fmt, ...);
+void _buf_printf(DA *da, const char *fmt, ...);
 
 #define buf_printf(da, fmt, ...) \
     do { \

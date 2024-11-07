@@ -148,7 +148,7 @@ void test_read_pgn(void) {
         //     ++m;
         // }
         const char *move_str = (const char *) pgn_game->move_strs->data[i];
-        Move move = notation_to_move(move_str, board);
+        Move move = san_notation_to_move(move_str, board);
         if (!is_move_null(move)) {
             apply_move(board, move);
         } else {
@@ -156,8 +156,8 @@ void test_read_pgn(void) {
         }
     }
 
-    DA* fen_da_1 = da_create();
-    char* fen_1 = board_to_fen(board, fen_da_1);
+    DA *fen_da_1 = da_create();
+    char *fen_1 = board_to_fen(board, fen_da_1);
 
     assert(strcmp(fen_1, "8/nk2bp2/p3b1p1/Pp1pPpP1/1P1P1P2/1KBN4/2N5/8 w - - 0 44") == 0);
 
@@ -181,8 +181,8 @@ void test_read_pgn(void) {
     // board_buf_write(board, board_da);
     // printf("%s\n", (char *) board_da->data);
     
-    DA* fen_da_2 = da_create();
-    char* fen_2 = board_to_fen(board, fen_da_2);
+    DA *fen_da_2 = da_create();
+    char *fen_2 = board_to_fen(board, fen_da_2);
     // debugs(fen_2);
     assert(strcmp(fen_2, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") == 0);
 
@@ -199,7 +199,7 @@ void test_pgn_with_fen(void) {
 
     DA *fens_da = da_create();
     for (size_t i = 0; i < pgn_game->move_strs->size; ++i) {
-        Move move = notation_to_move(pgn_game->move_strs->data[i], board);
+        Move move = san_notation_to_move(pgn_game->move_strs->data[i], board);
         apply_move(board, move);
         DA *fen_da = da_create();
         board_to_fen(board, fen_da);
@@ -217,7 +217,7 @@ void test_pgn_with_fen(void) {
         da_free(fen_da);
 
         for (size_t j = i + 1; j < pgn_game->move_strs->size; ++j) {
-            Move move = notation_to_move(pgn_game->move_strs->data[j], board);
+            Move move = san_notation_to_move(pgn_game->move_strs->data[j], board);
             apply_move(board, move);
         }
         

@@ -9,13 +9,13 @@ int rand_range(int a, int b);
 
 time_t time_now(void);
 
-char* read_file(const char* path);
+char *read_file(const char *path);
 
 void error_exit(int status);
 
 #define READ_LINE_CHUNK_SIZE 2048
-char* read_line(FILE* fp);
+char *read_line(FILE *fp);
 
 #if __STDC_VERSION__ < 202311L
-char* strndup(const char* str, size_t n);
+char *strndup(const char *str, size_t n);
 #endif

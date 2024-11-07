@@ -41,7 +41,9 @@ void undo_last_move(Board *board);
 
 char *board_to_fen(Board *board, DA *da);
 
-Move notation_to_move(const char *notation, Board *board);
+Move san_notation_to_move(const char *notation, Board *board);
+
+Move uci_notation_to_move(const char* move_str, Board* board);
 
 const char *fen_to_board(const char *fen, Board *board);
 
@@ -55,5 +57,6 @@ void test_apply_move(void);
 void test_undo_last_move(void);
 void test_board_to_fen(void);
 void test_fen_to_board(void);
-void test_notation_to_move(void);
+void test_san_notation_to_move(void);
+void test_uci_notation_to_move(void);
 void test_board(void);
