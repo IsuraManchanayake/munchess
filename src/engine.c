@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "engine.h"
 #include "board.h"
@@ -15,6 +17,7 @@ Engine *engine_create(void) {
 }
 
 void engine_start(Engine *engine) {
+    srand(time(NULL));
     if (engine->state == ENGINE_NOT_STARTED) {
         // Load engine related data
         engine->state = ENGINE_READY;

@@ -4,6 +4,7 @@
 
 #include "parser.h"
 #include "utils.h"
+#include "defs.h"
 
 const char *stream = NULL;
 size_t line_n = 1;
@@ -22,6 +23,7 @@ bool is_numeric(char c) {
 }
 
 bool is_promotable_piece(char c) {
+    c = capital(c);
     return c == 'Q' || c == 'N' || c == 'B' || c == 'R';
 }
 

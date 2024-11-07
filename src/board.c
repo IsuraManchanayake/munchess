@@ -29,10 +29,8 @@ void set_piece_null(Piece *piece) {
 }
 
 void board_reset(Board *board) {
-    for(size_t i = 0; i < 8; ++i) {
-        for(size_t j = 0; j < 8; ++j) {
-            set_piece_null(&ATyx(board, i, j));
-        }
+    for (size_t i = 0; i < 64; ++i) {
+        set_piece_null(board->pieces + i);
     }
     board->moves = dai32_create();
     board->first_king_move[WHITE] = 0;
@@ -51,7 +49,7 @@ void board_reset(Board *board) {
 }
 
 Board *board_create(void) {
-    Board *board = (Board *)arena_allocate(&arena, sizeof(Board));
+    Board *board = (Board *) arena_allocate(&arena, sizeof(Board));
     board_reset(board);
     return board;
 }

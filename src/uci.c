@@ -12,6 +12,7 @@
 #include "move.h"
 #include "piece.h"
 #include "parser.h"
+#include "utils.h"
 
 char *position_parser = NULL;
 
@@ -21,7 +22,7 @@ UCI *uci_create(void) {
     uci->engine = engine_create();
     uci->board = board_create();
     uci->last_move = move_data_create(0);
-    uci->log_fp = fopen("/Users/imanchanayak/munchess/logs.txt", "a");
+    uci->log_fp = fopen("logs.txt", "a");
     return uci;
 }
 
@@ -139,17 +140,17 @@ void send_message(UCI *uci, const char *fmt, ...) {
     va_end(args_2);
 }
 
-void log_input(UCI *uci, const char *input) {
+void log_input(UCI* uci, const char* input) {
     uci_log(uci, "> ", "%s", input);
 }
 
-void send_uci_ok(UCI *uci) {
+void send_uci_ok(UCI* uci) {
     send_message(uci, "id name %s", ENGINE_NAME);
     send_message(uci, "id author %s", ENGINE_AUTHOR);
     send_message(uci, "uciok");
 }
 
-void send_is_ready(UCI *uci) {
+void send_is_ready(UCI* uci) {
     engine_start(uci->engine);
     if (uci->engine->state == ENGINE_READY) {
         uci->state = UCI_READY;
@@ -157,12 +158,13 @@ void send_is_ready(UCI *uci) {
     }
 }
 
-const char *uci_store_board(UCI *uci, const char *fen) {
+const char* uci_store_board(UCI* uci, const char* fen) {
+    dai32_free(uci->board->moves);
     board_reset(uci->board);
     return fen_to_board(fen, uci->board);
 }
 
-void parse_position_command(UCI *uci, const char *input) {
+void parse_position_command(UCI* uci, const char* input) {
     start_parsing(input);
 
     expect_str("position");
@@ -172,9 +174,11 @@ void parse_position_command(UCI *uci, const char *input) {
         skip_whitespace();
         const char* current = uci_store_board(uci, stream);
         advance(current - stream);
-    } else if (soft_expect_str("startpos")) {
+    }
+    else if (soft_expect_str("startpos")) {
         uci_store_board(uci, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    } else {
+    }
+    else {
         uci_log(uci, "##", "Expected fen or startpos but found %s", input);
         exit(-1);
     }
@@ -182,13 +186,13 @@ void parse_position_command(UCI *uci, const char *input) {
     if (soft_expect_str("moves")) {
         skip_whitespace();
         while (*stream) {
-            const char *start = stream;
+            const char* start = stream;
             expect_range('a', 'h');
             expect_range('1', '8');
             expect_range('a', 'h');
             expect_range('1', '8');
             soft_expect_fn(is_promotable_piece);
-            char uci_move_str[6] = {0};
+            char uci_move_str[6] = { 0 };
             memcpy(uci_move_str, start, stream - start);
 
             Move move = uci_to_move(uci_move_str, uci->board);
@@ -200,15 +204,15 @@ void parse_position_command(UCI *uci, const char *input) {
             }
         }
     }
-    DA *da = da_create();
-    char *fen = board_to_fen(uci->board, da);
+    DA* da = da_create();
+    char* fen = board_to_fen(uci->board, da);
     uci_log(uci, "**", "fen = %s", fen);
     da_free(da);
 }
 
-void send_best_move(UCI *uci) {
+void send_best_move(UCI* uci) {
     Move move = engine_best_move(uci->engine, uci->board);
-    char uci_move_str[6] = {0};
+    char uci_move_str[6] = { 0 };
     uci->last_move = move;
     move_to_uci(move, uci_move_str);
     apply_move(uci->board, move);
@@ -216,15 +220,14 @@ void send_best_move(UCI *uci) {
 }
 
 void start_uci(void) {
-    UCI *uci = uci_create();
+    UCI* uci = uci_create();
 
-    char input[2048];
+    char* input;
     while (true) {
-        if (!fgets(input, sizeof(input), stdin)) {
-            break;  // Handle EOF gracefully
+        if ((input = read_line(stdin)) == NULL) {
+            break;
         }
         log_input(uci, input);
-        input[strcspn(input, "\n")] = 0;
 
         if (match_cmd(input, "uci")) {
             send_uci_ok(uci);
@@ -246,6 +249,7 @@ void start_uci(void) {
             break;
         }
         fflush(stdout);
+        free(input);
     }
     send_message(uci, "Exiting.");
     fclose(uci->log_fp);

@@ -14,12 +14,12 @@
 #endif
 
 unsigned rand_lim(unsigned limit) {
-    unsigned divisor = RAND_MAX/(limit+1);
+    unsigned divisor = RAND_MAX / limit;
     unsigned retval;
 
     do { 
         retval = rand() / divisor;
-    } while (retval > limit);
+    } while (retval >= limit);
 
     return retval;
 }
@@ -70,6 +70,45 @@ char* read_file(const char* path) {
 
 void error_exit(int status) {
     exit(status);
+}
+
+char* read_line(FILE* fp) {
+    char* buffer = NULL;
+    size_t buffer_size = 0;
+    size_t total_read = 0;
+
+    do {
+        char* new_buffer = realloc(buffer, buffer_size + READ_LINE_CHUNK_SIZE);
+        if (new_buffer == NULL) {
+            free(buffer);
+            return NULL;
+        }
+        buffer = new_buffer;
+        buffer_size += READ_LINE_CHUNK_SIZE;
+
+        // Read chunk
+        if (fgets(buffer + total_read, READ_LINE_CHUNK_SIZE, fp) == NULL) {
+            if (total_read == 0) {  // Nothing was read
+                free(buffer);
+                return NULL;
+            }
+            break;
+        }
+
+        size_t chunk_read = strlen(buffer + total_read);
+        total_read += chunk_read;
+
+        // Check if we found a newline
+        if (total_read > 0 && buffer[total_read - 1] == '\n') {
+            buffer[total_read - 1] = '\0';  // Remove newline
+            break;
+        }
+
+    } while (!feof(fp) && !ferror(fp));
+
+    // Shrink buffer to actual size needed
+    char* final_buffer = realloc(buffer, total_read + 1);
+    return final_buffer ? final_buffer : buffer;
 }
 
 #if __STDC_VERSION__ < 202311L

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 extern const char *stream;
 extern size_t line_n;

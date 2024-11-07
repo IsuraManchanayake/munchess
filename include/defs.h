@@ -2,7 +2,7 @@
 #define ENGINE_AUTHOR "Isura"
 
 #define simple(c) ((char)((c) | 32))
-#define capital(c) ((char)(c) & ~32))
+#define capital(c) ((char)(c) & ~32)
 #define dtoc(d) ((char)((d) + '0'))
 #define ctod(c) ((c) - '0')
 
