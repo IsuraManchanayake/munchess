@@ -57,7 +57,7 @@ void _uci_log_base(UCI *uci, const char *prefix, const char*fmt, va_list args) {
     char buffer[26];
     curr_time(buffer);
 
-    fprintf(uci->log_fp, "%.2s %s ", prefix, buffer);
+    fprintf(uci->log_fp, "%.2s %ld %s ", prefix, getpid(), buffer);
     vfprintf(uci->log_fp, fmt, args);
     fprintf(uci->log_fp, "\n");
     fflush(uci->log_fp);

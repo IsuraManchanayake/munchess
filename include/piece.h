@@ -7,7 +7,7 @@
 
 typedef enum Color UNDERLYING(uint8_t) {
     WHITE=0,
-    BLACK,
+    BLACK=1,
 } Color;
 
 typedef enum PieceType UNDERLYING(uint8_t) {

@@ -3,6 +3,14 @@
 #include <time.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#define getpid GetCurrentProcessId
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#endif
+
 unsigned rand_lim(unsigned limit);
 
 int rand_range(int a, int b);

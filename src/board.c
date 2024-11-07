@@ -146,6 +146,19 @@ void apply_move(Board *board, Move move) {
     }
     if (move_is_type_of(move, CAPTURE)) {
         board->last_capture_move[color] = 1 + board->half_move_counter;
+
+        if (move.captured_type == ROOK) {
+            size_t to = move.to;
+            size_t last_y = move.piece_color == WHITE ? 7 : 0;
+            Color op = op_color(move.piece_color);
+            if (to == YX_TO_IDX(last_y, 0) && board->first_king_rook_move[op] == 0) {
+                // King side rook capture
+                board->first_king_rook_move[op] = 1 + board->half_move_counter;
+            } else if (to == YX_TO_IDX(last_y, 7) && board->first_queen_rook_move[op] == 0) {
+                // Queen side rook capture
+                board->first_queen_rook_move[op] = 1 + board->half_move_counter;
+            }
+        }
     }
     board->to_move = op_color(color);
     ++board->half_move_counter;
@@ -199,6 +212,18 @@ void undo_last_move(Board *board) {
         }
         if (!found) {
             board->last_capture_move[color] = board->half_move_counter - board->moves->size - board->initial_half_move_clock;
+        }
+
+        if (move.captured_type == ROOK) {
+            size_t to = move.to;
+            size_t last_y = move.piece_color == WHITE ? 7 : 0;
+            Color op = op_color(move.piece_color);
+
+            if (to == YX_TO_IDX(last_y, 0) && board->first_king_rook_move[op] == board->half_move_counter) {
+                board->first_king_rook_move[op] = 0;
+            } else if (to == YX_TO_IDX(last_y, 7) && board->first_queen_rook_move[op] == board->half_move_counter) {
+                board->first_queen_rook_move[op] = 0;
+            }
         }
     } else {
         set_square_empty(board, move.to);
@@ -877,7 +902,6 @@ void test_san_notation_to_move(void) {
     const char *expected_1 = "2kr2nr/pppq1ppp/2npb3/2b1p3/2B1P3/2NP1N2/PPPB1PPP/R2Q1RK1 w - - 5 8";
     assert(strcmp(fen_1, expected_1) == 0);
     da_free(da_1);
-
 
     for (size_t i = 0; i < sizeof(moves) / sizeof(moves[0]); ++i) {
         undo_last_move(board);

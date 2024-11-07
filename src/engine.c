@@ -17,8 +17,8 @@ Engine *engine_create(void) {
 }
 
 void engine_start(Engine *engine) {
-    srand(time(NULL));
     if (engine->state == ENGINE_NOT_STARTED) {
+        srand((unsigned)getpid());
         // Load engine related data
         engine->state = ENGINE_READY;
     } else {

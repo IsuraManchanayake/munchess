@@ -26,7 +26,7 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
             if (yx_is_safe(y - dir, x + 1)) {
                 attacked[YX_TO_IDX(y - dir, x + 1)] = i + 1;
             }
-            if (yx_is_safe(y - dir, x + 1)) {
+            if (yx_is_safe(y - dir, x - 1)) {
                 attacked[YX_TO_IDX(y - dir, x - 1)] = i + 1;
             }
         } else if (board->pieces[i].type == BISHOP
@@ -540,7 +540,11 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
             size_t sq_1 = YX_TO_IDX(y, x);
             size_t sq_2 = YX_TO_IDX(y, x + 1);
             size_t sq_3 = YX_TO_IDX(y, x + 2);
-            if (!attacked[sq_1]
+			size_t sq_4 = YX_TO_IDX(y, x + 3);
+            Piece rook = board->pieces[sq_4];
+            if (rook.color == piece.color 
+                && rook.type == ROOK 
+                && !attacked[sq_1]
                 && !attacked[sq_2]
                 && !attacked[sq_3]
                 && is_piece_null(board->pieces[sq_2])
@@ -554,7 +558,11 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
             size_t sq_2 = YX_TO_IDX(y, x - 1);
             size_t sq_3 = YX_TO_IDX(y, x - 2);
             size_t sq_4 = YX_TO_IDX(y, x - 3);
-            if (!attacked[sq_1]
+            size_t sq_5 = YX_TO_IDX(y, x - 4);
+            Piece rook = board->pieces[sq_5];
+            if (rook.color == piece.color
+                && rook.type == ROOK
+                && !attacked[sq_1]
                 && !attacked[sq_2]
                 && !attacked[sq_3]
                 && is_piece_null(board->pieces[sq_2])
