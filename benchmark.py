@@ -30,6 +30,7 @@ def get_engine_choices():
 
     return choices
 
+
 def main():
     engine_choices = get_engine_choices()
 

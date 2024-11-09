@@ -1,10 +1,4 @@
 cmake_minimum_required(VERSION 3.5)
-project (chess)
-
-set(CMAKE_C_STANDARD 17)
-
-include_directories(${chess_SOURCE_DIR}/include)
-cmake_minimum_required(VERSION 3.5)
 project(chess)
 
 if(MSVC)
