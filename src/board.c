@@ -112,9 +112,12 @@ void place_initial_pieces(Board *board) {
     board->to_move = WHITE;
 }
 
-size_t king_idx(Board *board, Color color) {
+size_t get_king_idx(Board *board, Color color) {
 #if _WIN32
-    return _BitScanForward(board->king_bb[color]);
+    unsigned long index;
+    unsigned char non_zero = _BitScanForward64(&index, board->king_bb[color]);
+    assert(non_zero > 0);
+    return index;
 #else
     return __builtin_ctzll(board->king_bb[color]);
 #endif
@@ -315,6 +318,14 @@ void undo_last_move(Board *board) {
     undo_last_move_base(board, true);
 }
 
+size_t n_moves_since_last_pawn_or_capture_move(Board *board) {
+    size_t last_pawn_move = max(board->last_pawn_move[WHITE], board->last_pawn_move[BLACK]);
+    size_t last_capture_move = max(board->last_capture_move[WHITE], board->last_capture_move[WHITE]);
+    size_t last_pawn_or_capture_move = max(last_pawn_move, last_capture_move);
+    size_t moves_since_last_pawn_or_capture_move = board->half_move_counter - last_pawn_or_capture_move;
+    return moves_since_last_pawn_or_capture_move;
+}
+
 char *board_to_fen(Board *board, DA *da) {
     for (size_t y = 8; y-- > 0;) {
         size_t null_counter = 0;
@@ -382,12 +393,10 @@ char *board_to_fen(Board *board, DA *da) {
     if (!en_passant) {
         buf_printf(da, "-", 0);
     }
-    size_t last_pawn_move = max(board->last_pawn_move[WHITE], board->last_pawn_move[BLACK]);
-    size_t last_capture_move = max(board->last_capture_move[WHITE], board->last_capture_move[WHITE]);
-    size_t last_pawn_or_capture_move = max(last_pawn_move, last_capture_move);
-    size_t moves_since_last_pawn_or_capture_move = board->half_move_counter - last_pawn_or_capture_move;
-   
+    
+    size_t moves_since_last_pawn_or_capture_move = n_moves_since_last_pawn_or_capture_move(board);
     size_t full_move_counter = 1 + board->half_move_counter / 2;
+
     buf_printf(da, " %zu %zu", moves_since_last_pawn_or_capture_move, full_move_counter);
     return (char *) da->data;
 }
@@ -407,7 +416,7 @@ const char *fen_to_board(const char *fen, Board *board) {
         } else {
             Piece piece = char_to_piece(*fen);
             if (piece.type != NONE) {
-                board->pieces[(7 - idx / 8) * 8 + idx % 8] = piece;
+                set_piece(board, (7 - idx / 8) * 8 + idx % 8, piece);
                 ++idx;
             } else {
                 assert(0);
@@ -718,6 +727,20 @@ char *board_buf_write(Board *board, DA *da) {
     return (char *)da->data;
 }
 
+void print_board(Board *board) {
+    DA *da = da_create();
+    char *board_str = board_buf_write(board, da);
+    printf("%s\n", board_str);
+    da_free(da);
+}
+
+void print_fen(Board* board) {
+    DA *da = da_create();
+    char *fen = board_to_fen(board, da);
+    printf("%s\n", fen);
+    da_free(da);
+}
+
 // ===========================================
 
 void test_board_initial(void) {
@@ -980,15 +1003,16 @@ void test_uci_notation_to_move(void) {
 
     DAi32* moves = dai32_create();
     generate_moves(board, moves);
-    assert(moves->size == 35);
+
+    //print_board(board);
+    //print_fen(board);
+
     //for (size_t i = 0; i < moves->size; ++i) {
     //	Move move = move_data_create(moves->data[i]);
 
-    //	DA *move_da = da_create();
-    //	char *move_buf = move_buf_write(move, move_da);
-    //	printf("%s\n", move_buf);
-    //	da_free(move_da);
+    //    print_move(move);
     //}
+    assert(moves->size == 35);
 
     (void)seq;
 }

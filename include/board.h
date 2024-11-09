@@ -45,7 +45,7 @@ void set_attacked(Board *board, size_t idx);
 
 void place_initial_pieces(Board *board);
 
-size_t king_idx(Board *board, Color color);
+size_t get_king_idx(Board *board, Color color);
 
 int move_direction(Color color);
 
@@ -53,11 +53,11 @@ void apply_move_base(Board *board, Move move, bool invalidate_attacked);
 
 void apply_move(Board *board, Move move);
 
-// void set_square_empty(Board *board, size_t idx);
-
 void undo_last_move_base(Board *board, bool invalidate_attacked);
 
 void undo_last_move(Board *board);
+
+size_t n_moves_since_last_pawn_or_capture_move(Board* board);
 
 char *board_to_fen(Board *board, DA *da);
 
@@ -68,6 +68,10 @@ Move uci_notation_to_move(const char* move_str, Board* board);
 const char *fen_to_board(const char *fen, Board *board);
 
 char *board_buf_write(Board *board, DA *da);
+
+void print_board(Board *board);
+
+void print_fen(Board* board);
 
 // ===========================================
 

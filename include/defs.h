@@ -1,4 +1,4 @@
-#define ENGINE_NAME "Munchess 0.1"
+#define ENGINE_NAME "Munchess 0.2"
 #define ENGINE_AUTHOR "Isura"
 
 #define simple(c) ((char)((c) | 32))

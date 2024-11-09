@@ -121,11 +121,16 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
 #undef set_attacked
 }
 
-size_t king_in_check(Board *board, size_t king_idx) {
+bool _return_king_in_check(size_t *checked_by, size_t idx) {
+    *checked_by = idx;
+    return true;
+}
+
+bool is_king_in_check_base(Board *board, Color color, size_t *checked_by) {
+    size_t king_idx = get_king_idx(board, color);
     int x = IDX_X(king_idx);
     int y = IDX_Y(king_idx);
     Piece king_piece = board->pieces[king_idx];
-    Color color = king_piece.color;
 
     // Pawn
     int dir = move_direction(color);
@@ -134,14 +139,14 @@ size_t king_in_check(Board *board, size_t king_idx) {
     if (yx_is_safe(y + dir, x + 1)) {
         if (board->pieces[dest].color != color 
             && board->pieces[dest].type == PAWN) {
-            return dest + 1;
+            return _return_king_in_check(checked_by, dest);
         }
     }
     dest = YX_TO_IDX(y + dir, x - 1);
     if (yx_is_safe(y + dir, x - 1)) {
         if (board->pieces[dest].color != color 
             && board->pieces[dest].type == PAWN) {
-            return dest + 1;
+            return _return_king_in_check(checked_by, dest);
         }
     }
 
@@ -170,7 +175,7 @@ size_t king_in_check(Board *board, size_t king_idx) {
             if (!is_piece_null(board->pieces[dest])) {
                 if (board->pieces[dest].color != color
                     && (board->pieces[dest].type == BISHOP || board->pieces[dest].type == QUEEN)) {
-                    return dest + 1;
+                    return _return_king_in_check(checked_by, dest);
                 } else {
                     break;
                 }
@@ -190,7 +195,7 @@ size_t king_in_check(Board *board, size_t king_idx) {
             if (!is_piece_null(board->pieces[dest])) {
                 if (board->pieces[dest].color != color
                     && (board->pieces[dest].type == ROOK || board->pieces[dest].type == QUEEN)) {
-                    return dest + 1;
+                    return _return_king_in_check(checked_by, dest);
                 } else {
                     break;
                 }
@@ -217,7 +222,7 @@ size_t king_in_check(Board *board, size_t king_idx) {
             if (!is_piece_null(board->pieces[dest]) 
                 && board->pieces[dest].color != color 
                 && board->pieces[dest].type == KNIGHT) {
-                return dest + 1;
+                return _return_king_in_check(checked_by, dest);
             }
         }
     }
@@ -240,23 +245,31 @@ size_t king_in_check(Board *board, size_t king_idx) {
             if (!is_piece_null(board->pieces[dest]) 
                 && board->pieces[dest].color != color 
                 && board->pieces[dest].type == KING) {
-                return dest + 1;
+                return _return_king_in_check(checked_by, dest);
             }
         }
     }
 
-    return 0;
+    *checked_by = 0;
+    return false;
 }
 
-void validate_and_push_move(Board *board, DAi32 *moves, Move move, size_t king_idx) {
+
+bool is_king_in_check(Board *board) {
+    size_t checked_by = 0;
+    return is_king_in_check_base(board, board->to_move, &checked_by);
+}
+
+void validate_and_push_move(Board *board, DAi32 *moves, Move move) {
     apply_move_base(board, move, false);
-    if (king_in_check(board, king_idx) == 0) {
+    size_t _checked_by = 0;
+    if (!is_king_in_check_base(board, move.piece_color, &_checked_by)) {
         dai32_push(moves, move.data);
     }
     undo_last_move_base(board, false);
 }
 
-void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx) {
+void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves) {
     Piece piece = board->pieces[idx];
     assert(piece.type == PAWN);
 
@@ -278,18 +291,18 @@ void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
         if ((y == 6 && piece.color == WHITE) || (y == 1 && piece.color == BLACK)) {
             for (size_t i = 0; i < sizeof(possible_promotions) / sizeof(possible_promotions[0]); ++i) {
                 Move promotion_move = move_create(piece, idx, one_step, PROMOTION, possible_promotions[i], NONE);
-                validate_and_push_move(board, moves, promotion_move, king_idx);
+                validate_and_push_move(board, moves, promotion_move);
             }
         } else {
             // One step move
             Move one_step_move = move_create(piece, idx, one_step, NORMAL, NONE, NONE);
-            validate_and_push_move(board, moves, one_step_move, king_idx);
+            validate_and_push_move(board, moves, one_step_move);
             size_t two_steps = YX_TO_IDX(y + 2 * dir, x);
             // Two steps move
             if ((y == 1 && piece.color == WHITE) || (y == 6 && piece.color == BLACK)) {
                 if (is_piece_null(board_safe_at(board, two_steps))) {
                     Move two_steps_move = move_create(piece, idx, two_steps, NORMAL, NONE, NONE);      
-                    validate_and_push_move(board, moves, two_steps_move, king_idx);
+                    validate_and_push_move(board, moves, two_steps_move);
                 }
             }
         }
@@ -310,11 +323,11 @@ void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
             if ((dest_y == 7 && piece.color == WHITE) || (dest_y == 0 && piece.color == BLACK)) {
                 for (size_t j = 0; j < sizeof(possible_promotions) / sizeof(possible_promotions[0]); ++j) {
                     Move promotion_move = move_create(piece, idx, dest, CAPTURE | PROMOTION, possible_promotions[j], board->pieces[dest].type);
-                    validate_and_push_move(board, moves, promotion_move, king_idx);
+                    validate_and_push_move(board, moves, promotion_move);
                 }
             } else {
                 Move move = move_create(piece, idx, dest, CAPTURE, NONE, board->pieces[dest].type);
-                validate_and_push_move(board, moves, move, king_idx);
+                validate_and_push_move(board, moves, move);
             }
         }
     }
@@ -332,14 +345,14 @@ void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
                 if (last_move_from_y == 2 * dir + last_move_to_y) {
                     size_t dest = YX_TO_IDX(last_move_to_y + dir, last_move_to_x);
                     Move move = move_create(piece, idx, dest, CAPTURE | EN_PASSANT, NONE, PAWN);
-                    validate_and_push_move(board, moves, move, king_idx);
+                    validate_and_push_move(board, moves, move);
                 }
             }
         }
     }
 }
 
-void generate_bishop_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx) {
+void generate_bishop_moves(Board *board, size_t idx, DAi32 *moves) {
     Piece piece = board->pieces[idx];
     assert(piece.type == BISHOP);
 
@@ -362,11 +375,11 @@ void generate_bishop_moves(Board *board, size_t idx, DAi32 *moves, size_t king_i
             }
             if (is_piece_null(board->pieces[dest])) {
                 Move move = move_create(piece, idx, dest, NORMAL, NONE, NONE);
-                validate_and_push_move(board, moves, move, king_idx);
+                validate_and_push_move(board, moves, move);
             } else {
                 if (board->pieces[dest].color != piece.color && board->pieces[dest].type != KING) {
                     Move move = move_create(piece, idx, dest, CAPTURE, NONE, board->pieces[dest].type);
-                    validate_and_push_move(board, moves, move, king_idx);
+                    validate_and_push_move(board, moves, move);
                 }
                 break;
             }
@@ -374,7 +387,7 @@ void generate_bishop_moves(Board *board, size_t idx, DAi32 *moves, size_t king_i
     }
 }
 
-void generate_rook_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx) {
+void generate_rook_moves(Board *board, size_t idx, DAi32 *moves) {
     Piece piece = board->pieces[idx];
     assert(piece.type == ROOK);
 
@@ -397,11 +410,11 @@ void generate_rook_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
             }
             if (is_piece_null(board->pieces[dest])) {
                 Move move = move_create(piece, idx, dest, NORMAL, NONE, NONE);
-                validate_and_push_move(board, moves, move, king_idx);
+                validate_and_push_move(board, moves, move);
             } else {
                 if (board->pieces[dest].color != piece.color && board->pieces[dest].type != KING) {
                     Move move = move_create(piece, idx, dest, CAPTURE, NONE, board->pieces[dest].type);
-                    validate_and_push_move(board, moves, move, king_idx);
+                    validate_and_push_move(board, moves, move);
                 }
                 break;
             }
@@ -409,7 +422,7 @@ void generate_rook_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
     }
 }
 
-void generate_queen_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx) {
+void generate_queen_moves(Board *board, size_t idx, DAi32 *moves) {
     Piece piece = board->pieces[idx];
     assert(piece.type == QUEEN);
 
@@ -436,11 +449,11 @@ void generate_queen_moves(Board *board, size_t idx, DAi32 *moves, size_t king_id
             }
             if (is_piece_null(board->pieces[dest])) {
                 Move move = move_create(piece, idx, dest, NORMAL, NONE, NONE);
-                validate_and_push_move(board, moves, move, king_idx);
+                validate_and_push_move(board, moves, move);
             } else {
                 if (board->pieces[dest].color != piece.color && board->pieces[dest].type != KING) {
                     Move move = move_create(piece, idx, dest, CAPTURE, NONE, board->pieces[dest].type);
-                    validate_and_push_move(board, moves, move, king_idx);
+                    validate_and_push_move(board, moves, move);
                 }
                 break;
             }
@@ -448,7 +461,7 @@ void generate_queen_moves(Board *board, size_t idx, DAi32 *moves, size_t king_id
     }
 }
 
-void generate_knight_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx) {
+void generate_knight_moves(Board *board, size_t idx, DAi32 *moves) {
     Piece piece = board->pieces[idx];
     assert(piece.type == KNIGHT);
 
@@ -474,11 +487,11 @@ void generate_knight_moves(Board *board, size_t idx, DAi32 *moves, size_t king_i
         size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
         if (is_piece_null(board->pieces[dest])) {
             Move move = move_create(piece, idx, dest, NORMAL, NONE, NONE);
-            validate_and_push_move(board, moves, move, king_idx);
+            validate_and_push_move(board, moves, move);
         } else {
             if (board->pieces[dest].color != piece.color && board->pieces[dest].type != KING) {
                 Move move = move_create(piece, idx, dest, CAPTURE, NONE, board->pieces[dest].type);
-                validate_and_push_move(board, moves, move, king_idx);
+                validate_and_push_move(board, moves, move);
             }
         }
     }
@@ -530,11 +543,11 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
         // }
         if (is_piece_null(board->pieces[dest])) {
             Move move = move_create(piece, idx, dest, NORMAL, NONE, NONE);
-            validate_and_push_move(board, moves, move, dest);
+            validate_and_push_move(board, moves, move);
         } else {
             if (board->pieces[dest].color != piece.color && board->pieces[dest].type != KING) {
                 Move move = move_create(piece, idx, dest, CAPTURE, NONE, board->pieces[dest].type);
-                validate_and_push_move(board, moves, move, dest);
+                validate_and_push_move(board, moves, move);
             }
         }
     }
@@ -562,7 +575,7 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
                 && is_piece_null(board->pieces[sq_2])
                 && is_piece_null(board->pieces[sq_3])) {
                 Move move = move_create(piece, idx, sq_3, CASTLE, NONE, NONE);
-                validate_and_push_move(board, moves, move, sq_3);
+                validate_and_push_move(board, moves, move);
             }
         }
         if (board->first_queen_rook_move[piece.color] == 0) {
@@ -581,7 +594,7 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
                 && is_piece_null(board->pieces[sq_3])
                 && is_piece_null(board->pieces[sq_4])) {
                 Move move = move_create(piece, idx, sq_3, CASTLE, NONE, NONE);
-                validate_and_push_move(board, moves, move, sq_3);
+                validate_and_push_move(board, moves, move);
             }
         }
         // }
@@ -590,25 +603,17 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
 
 void generate_moves(Board *board, DAi32 *moves) {
     time_t start_time = time_now();
-    size_t king_idx;
-    for (size_t i = 0; i < 64; ++i) {
-        Piece* piece = board->pieces + i;
-        if (piece->type == KING && piece->color == board->to_move) {
-            king_idx = i;
-            break;
-        }
-    }
     for(size_t i = 0; i < 64; ++i) {
         Piece piece = board->pieces[i];
-        if (is_piece_null(piece) || piece.type == NONE || piece.color != board->to_move) {
+        if (is_piece_null(piece) || piece.color != board->to_move) {
             continue;
         }
         switch (piece.type) {
-            case PAWN:   generate_pawn_moves(board, i, moves, king_idx); break;
-            case BISHOP: generate_bishop_moves(board, i, moves, king_idx); break;
-            case ROOK:   generate_rook_moves(board, i, moves, king_idx); break;
-            case QUEEN:  generate_queen_moves(board, i, moves, king_idx); break;
-            case KNIGHT: generate_knight_moves(board, i, moves, king_idx); break;
+            case PAWN:   generate_pawn_moves(board, i, moves); break;
+            case BISHOP: generate_bishop_moves(board, i, moves); break;
+            case ROOK:   generate_rook_moves(board, i, moves); break;
+            case QUEEN:  generate_queen_moves(board, i, moves); break;
+            case KNIGHT: generate_knight_moves(board, i, moves); break;
             case KING:   generate_king_moves(board, i, moves); break;
             default: assert(0);
         }

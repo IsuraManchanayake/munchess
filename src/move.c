@@ -72,6 +72,13 @@ char *move_buf_write(Move move, DA *da) {
     return (char *) da->data;
 }
 
+void print_move(Move move) {
+    DA *da = da_create();
+    char *move_str = move_buf_write(move, da);
+    printf("%s\n", move_str);
+    da_free(da);
+}
+
 // ============================================
 
 void test_move_size(void) {

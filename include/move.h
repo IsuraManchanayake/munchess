@@ -39,9 +39,9 @@ Move move_data_create(uint32_t data);
 
 bool is_move_null(Move move);
 
-// typedef struct Board Board;
-
 char *move_buf_write(Move move, DA *da);
+
+void print_move(Move move);
 
 // ============================================
 
