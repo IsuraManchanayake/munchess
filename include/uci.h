@@ -20,6 +20,7 @@ typedef struct UCI {
     Board *board;
     Move last_move;
     FILE *log_fp;
+    int pid;  // Process id
 } UCI;
 
 extern char *position_parser;

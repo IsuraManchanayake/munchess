@@ -24,13 +24,29 @@ Piece board_safe_at(const Board *board, size_t idx) {
     return (Piece) {.data=0};
 }
 
-void set_piece_null(Piece *piece) {
-    piece->data = 0;
+void clear_square(Board *board, size_t idx) {
+    if (board->pieces[idx].type == KING) {
+        board->king_bb[board->pieces[idx].color] &= ~(1ULL << idx);
+    }
+    board->pieces[idx].data = 0;
+}
+
+void set_piece_with(Board *board, size_t idx, Color color, PieceType type) {
+    if (type == KING) {
+        board->king_bb[color] = 1ULL << idx;
+    }
+    board->pieces[idx].data = 0;
+    board->pieces[idx].color = color;
+    board->pieces[idx].type = type;
+}
+
+void set_piece(Board *board, size_t idx, Piece piece) {
+    set_piece_with(board, idx, piece.color, piece.type);
 }
 
 void board_reset(Board *board) {
     for (size_t i = 0; i < 64; ++i) {
-        set_piece_null(board->pieces + i);
+        clear_square(board, i);
     }
     board->moves = dai32_create();
     board->first_king_move[WHITE] = 0;
@@ -46,6 +62,12 @@ void board_reset(Board *board) {
     board->to_move = WHITE;
     board->initial_half_move_clock = 0;
     board->half_move_counter = 0;
+    board->king_bb[WHITE] = 0;
+    board->king_bb[BLACK] = 0;
+
+    board->time_to_generate_last_move_us = 0;
+    board->attacked = 0;
+    board->attacked_evaluated = false;
 }
 
 Board *board_create(void) {
@@ -54,38 +76,55 @@ Board *board_create(void) {
     return board;
 }
 
+bool is_attacked(Board *board, size_t idx) {
+    assert(board->attacked_evaluated);
+    return board->attacked & (1ULL << idx);
+}
+
+void set_attacked(Board *board, size_t idx) {
+    board->attacked |= (1ULL << idx);
+}
+
 void place_initial_pieces(Board *board) {
     for(size_t i = 0; i < 8; ++i) {
-        ATyx(board, 1, i) = piece_create(WHITE, PAWN);
-        ATyx(board, 6, i) = piece_create(BLACK, PAWN);
+        set_piece_with(board, YX_TO_IDX(1, i), WHITE, PAWN);
+        set_piece_with(board, YX_TO_IDX(6, i), BLACK, PAWN);
     }
 
-    ATcoord(board, "A1") = piece_create(WHITE, ROOK);
-    ATcoord(board, "B1") = piece_create(WHITE, KNIGHT);
-    ATcoord(board, "C1") = piece_create(WHITE, BISHOP);
-    ATcoord(board, "D1") = piece_create(WHITE, QUEEN);
-    ATcoord(board, "E1") = piece_create(WHITE, KING);
-    ATcoord(board, "F1") = piece_create(WHITE, BISHOP);
-    ATcoord(board, "G1") = piece_create(WHITE, KNIGHT);
-    ATcoord(board, "H1") = piece_create(WHITE, ROOK);
+    set_piece_with(board, COORD_TO_IDX("a1"), WHITE, ROOK);
+    set_piece_with(board, COORD_TO_IDX("b1"), WHITE, KNIGHT);
+    set_piece_with(board, COORD_TO_IDX("c1"), WHITE, BISHOP);
+    set_piece_with(board, COORD_TO_IDX("d1"), WHITE, QUEEN);
+    set_piece_with(board, COORD_TO_IDX("e1"), WHITE, KING);
+    set_piece_with(board, COORD_TO_IDX("f1"), WHITE, BISHOP);
+    set_piece_with(board, COORD_TO_IDX("g1"), WHITE, KNIGHT);
+    set_piece_with(board, COORD_TO_IDX("h1"), WHITE, ROOK);
 
-    ATcoord(board, "A8") = piece_create(BLACK, ROOK);
-    ATcoord(board, "B8") = piece_create(BLACK, KNIGHT);
-    ATcoord(board, "C8") = piece_create(BLACK, BISHOP);
-    ATcoord(board, "D8") = piece_create(BLACK, QUEEN);
-    ATcoord(board, "E8") = piece_create(BLACK, KING);
-    ATcoord(board, "F8") = piece_create(BLACK, BISHOP);
-    ATcoord(board, "G8") = piece_create(BLACK, KNIGHT);
-    ATcoord(board, "H8") = piece_create(BLACK, ROOK);
+    set_piece_with(board, COORD_TO_IDX("a8"), BLACK, ROOK);
+    set_piece_with(board, COORD_TO_IDX("b8"), BLACK, KNIGHT);
+    set_piece_with(board, COORD_TO_IDX("c8"), BLACK, BISHOP);
+    set_piece_with(board, COORD_TO_IDX("d8"), BLACK, QUEEN);
+    set_piece_with(board, COORD_TO_IDX("e8"), BLACK, KING);
+    set_piece_with(board, COORD_TO_IDX("f8"), BLACK, BISHOP);
+    set_piece_with(board, COORD_TO_IDX("g8"), BLACK, KNIGHT);
+    set_piece_with(board, COORD_TO_IDX("h8"), BLACK, ROOK);
 
     board->to_move = WHITE;
+}
+
+size_t king_idx(Board *board, Color color) {
+#if _WIN32
+    return _BitScanForward(board->king_bb[color]);
+#else
+    return __builtin_ctzll(board->king_bb[color]);
+#endif
 }
 
 int move_direction(Color color) {
     return (int) 2 * (color == WHITE) - 1;
 }
 
-void apply_move(Board *board, Move move) {
+void apply_move_base(Board *board, Move move, bool invalidate_attacked) {
     if (move.piece_color != board->to_move) {
         assert(0);
     }
@@ -97,13 +136,13 @@ void apply_move(Board *board, Move move) {
         if (file == 'g') {
             Piece rook = ATfr(board, 'h', rank);
             assert(rook.type == ROOK);
-            ATfr(board, 'f', rank) = rook;
-            set_piece_null(&ATfr(board, 'h', rank));
+            set_piece(board, FR_TO_IDX('f', rank), rook);
+            clear_square(board, FR_TO_IDX('h', rank));
         } else if (file == 'c') {
             Piece rook = ATfr(board, 'a', rank);
             assert(rook.type == ROOK);
-            ATfr(board, 'd', rank) = rook;
-            set_piece_null(&ATfr(board, 'a', rank));
+            set_piece(board, FR_TO_IDX('d', rank), rook);
+            clear_square(board, FR_TO_IDX('a', rank));
         } else {
             assert(0);
         }
@@ -113,12 +152,10 @@ void apply_move(Board *board, Move move) {
         int dir = move_direction(color);
         size_t to_y = IDX_Y(move.to);
         size_t to_x = IDX_X(move.to);
-        set_piece_null(&ATyx(board, to_y - dir, to_x));
+        clear_square(board, YX_TO_IDX(to_y - dir, to_x));
     }
-    set_piece_null(&ATidx(board, move.from));
-    Piece *piece_to = &ATidx(board, move.to);
-    piece_to->color = color;
-    piece_to->type = move.piece_type;
+    clear_square(board, move.from);
+    set_piece_with(board, move.to, color, move.piece_type);
     if (move.piece_type == KING 
         && board->first_king_move[color] == 0) {
         board->first_king_move[color] = 1 + board->half_move_counter;
@@ -162,14 +199,18 @@ void apply_move(Board *board, Move move) {
     }
     board->to_move = op_color(color);
     ++board->half_move_counter;
+    if (invalidate_attacked) {
+        board->attacked_evaluated = false;
+        board->attacked = 0;
+    }
     dai32_push(board->moves, move.data);
 }
 
-void set_square_empty(Board *board, size_t idx) {
-    set_piece_null(board->pieces + idx);
+void apply_move(Board *board, Move move) {
+    apply_move_base(board, move, true);
 }
 
-void undo_last_move(Board *board) {
+void undo_last_move_base(Board *board, bool invalidate_attacked) {
     assert(board->moves->size > 0);
     Move move = move_data_create(board->moves->data[board->moves->size - 1]);
     const Color color = move.piece_color;
@@ -179,13 +220,13 @@ void undo_last_move(Board *board) {
         if (file == 'g') {
             Piece rook = ATfr(board, 'f', rank);
             assert(rook.type == ROOK);
-            ATfr(board, 'h', rank) = rook;
-            set_square_empty(board, FR_TO_IDX('f', rank));
+            set_piece(board, FR_TO_IDX('h', rank), rook);
+            clear_square(board, FR_TO_IDX('f', rank));
         } else if (file == 'c') {
             Piece rook = ATfr(board, 'd', rank);
             assert(rook.type == ROOK);
-            ATfr(board, 'a', rank) = rook;
-            set_square_empty(board, FR_TO_IDX('d', rank));
+            set_piece(board, FR_TO_IDX('a', rank), rook);
+            clear_square(board, FR_TO_IDX('d', rank));
         } else {
             assert(0);
         }
@@ -198,10 +239,9 @@ void undo_last_move(Board *board) {
         size_t to_x = IDX_X(move.to);
         ATyx(board, to_y - dir, to_x) = piece_create(op_color(color), PAWN);
     }
-    ATidx(board, move.from) = piece_create(color, move.piece_type);
+    set_piece_with(board, move.from, color, move.piece_type);
     if (move_is_type_of(move, CAPTURE)) {
-        ATidx(board, move.to) = piece_create(op_color(color), move.captured_type);
-        bool found = false;
+        set_piece_with(board, move.to, op_color(color), move.captured_type);        bool found = false;
         for (size_t i = board->moves->size - 1; i-- > 0;) {
             Move tmove = move_data_create(board->moves->data[i]);
             if (tmove.piece_color == color && move_is_type_of(tmove, CAPTURE)) {
@@ -226,7 +266,7 @@ void undo_last_move(Board *board) {
             }
         }
     } else {
-        set_square_empty(board, move.to);
+        clear_square(board, move.to);
     }
     if (move.piece_type == KING) {
         if (board->first_king_move[color] == board->half_move_counter) {
@@ -264,7 +304,15 @@ void undo_last_move(Board *board) {
     }
     board->to_move = color;
     --board->half_move_counter;
+    if (invalidate_attacked) {
+        board->attacked = 0;
+        board->attacked_evaluated = false;
+    }
     (void) dai32_pop(board->moves);
+}
+
+void undo_last_move(Board *board) {
+    undo_last_move_base(board, true);
 }
 
 char *board_to_fen(Board *board, DA *da) {
@@ -351,7 +399,7 @@ const char *fen_to_board(const char *fen, Board *board) {
         if ('1' <= *fen && *fen <= '8') {
             size_t n = (*fen - '0');
             for (size_t i = 0; i < n; ++i) {
-                set_piece_null(board->pieces + (7 - idx / 8) * 8 + idx % 8);
+                clear_square(board, (7 - idx / 8) * 8 + idx % 8);
                 ++idx;
             }
         } else if (*fen == '/') {
@@ -470,12 +518,8 @@ Move san_notation_to_move(const char *notation, Board *board) {
     Move rmove = (Move) {0};
     Color color = board->to_move;
 
-    time_t start_time = time_now();
     generate_moves(board, moves);
-    time_t end_time = time_now();
-    double diff_ms = (end_time - start_time) / 1000.0;
-    (void) diff_ms;
-    //printf("Time for generating moves: %f ms\n", diff_ms);
+    // printf("Time for generating moves: %zu us\n", board->time_to_generate_last_move_us);
 
     const char *c = notation;
     size_t len = strlen(c);
@@ -717,7 +761,7 @@ void test_apply_move(void) {
     DA *da = da_create();
     char *repr = board_buf_write(board, da);
     // printf("%s\n", repr);
-    const char expected[] = 
+    const char* const expected = 
 "   +---+---+---+---+---+---+---+---+\n"
 " 8 | r |   | b | q | k | b | n | r |\n"
 "   +---+---+---+---+---+---+---+---+\n"
@@ -745,7 +789,7 @@ void test_undo_last_move(void) {
     Board *board = board_create();
     place_initial_pieces(board);
 
-    Move moves[] = {
+    const Move moves[] = {
         move_create(ATcoord(board, "E2"), COORD_TO_IDX("E2"), COORD_TO_IDX("E4"), NORMAL, NONE, NONE),
         move_create(ATcoord(board, "C7"), COORD_TO_IDX("C7"), COORD_TO_IDX("C5"), NORMAL, NONE, NONE),
         move_create(ATcoord(board, "G1"), COORD_TO_IDX("G1"), COORD_TO_IDX("F3"), NORMAL, NONE, NONE),

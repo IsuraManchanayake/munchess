@@ -24,6 +24,7 @@ add_library(chess_lib STATIC
     src/parser.c
     src/pgn.c
     src/piece.c
+    src/result.c
     src/utils.c
     src/tests.c
 )
@@ -38,6 +39,7 @@ set(HEADER_FILES
     include/parser.h
     include/pgn.h
     include/piece.h
+    include/result.h
     include/tests.h
     include/utils.h
 )

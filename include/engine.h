@@ -11,12 +11,15 @@ typedef enum EngineState UNDERLYING(uint8_t) {
 
 typedef struct Engine {
     EngineState state;
-    // Other options
+    Board *board;
+    DAi32 *moves;
 } Engine;
 
 Engine *engine_create(void);
 
 void engine_start(Engine *engine);
+
+int64_t evaluate_board(Engine *engine);
 
 Move engine_best_move(Engine *engine, Board *board);
 

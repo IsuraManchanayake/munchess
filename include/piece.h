@@ -8,6 +8,7 @@
 typedef enum Color UNDERLYING(uint8_t) {
     WHITE=0,
     BLACK=1,
+    NO_COLOR=2,  // Even number
 } Color;
 
 typedef enum PieceType UNDERLYING(uint8_t) {

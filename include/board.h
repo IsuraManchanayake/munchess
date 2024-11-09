@@ -15,6 +15,12 @@ typedef struct Board {
     size_t initial_half_move_clock;
     size_t half_move_counter;
     Color to_move;
+    uint64_t king_bb[2];
+
+    uint64_t attacked;
+    bool attacked_evaluated;
+
+    size_t time_to_generate_last_move_us;
 } Board;
 
 bool idx_is_safe(size_t idx);
@@ -23,19 +29,33 @@ bool yx_is_safe(size_t y, size_t x);
 
 Piece board_safe_at(const Board *board, size_t idx);
 
-void set_piece_null(Piece *piece);
+void clear_square(Board *board, size_t idx);
+
+void set_piece_with(Board *board, size_t idx, Color color, PieceType type);
+
+void set_piece(Board *board, size_t idx, Piece);
 
 void board_reset(Board *board);
 
 Board *board_create(void);
 
+bool is_attacked(Board *board, size_t idx);
+
+void set_attacked(Board *board, size_t idx);
+
 void place_initial_pieces(Board *board);
+
+size_t king_idx(Board *board, Color color);
 
 int move_direction(Color color);
 
+void apply_move_base(Board *board, Move move, bool invalidate_attacked);
+
 void apply_move(Board *board, Move move);
 
-void set_square_empty(Board *board, size_t idx);
+// void set_square_empty(Board *board, size_t idx);
+
+void undo_last_move_base(Board *board, bool invalidate_attacked);
 
 void undo_last_move(Board *board);
 

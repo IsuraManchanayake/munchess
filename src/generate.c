@@ -7,6 +7,12 @@
 #include "tests.h"
 
 void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *king_idx) {
+#define mark_attacked(idx, from) \
+    do { \
+        set_attacked(board, (idx)); \
+        attacked[(idx)] = (from) + 1; \
+    } while (0)
+    board->attacked = 0;
     int dir = move_direction(color);
 
     for (size_t i = 0; i < 64; ++i) {
@@ -24,16 +30,18 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
         // Pawns
         if (board->pieces[i].type == PAWN) {
             if (yx_is_safe(y - dir, x + 1)) {
-                attacked[YX_TO_IDX(y - dir, x + 1)] = i + 1;
+                size_t idx = YX_TO_IDX(y - dir, x + 1);
+                mark_attacked(idx, i);
             }
             if (yx_is_safe(y - dir, x - 1)) {
-                attacked[YX_TO_IDX(y - dir, x - 1)] = i + 1;
+                size_t idx = YX_TO_IDX(y - dir, x - 1);
+                mark_attacked(idx, i);
             }
         } else if (board->pieces[i].type == BISHOP
             || board->pieces[i].type == ROOK
             || board->pieces[i].type == QUEEN) {
 
-            int dirs[8][2] = {
+            static const int dirs[8][2] = {
                 // Bishop
                 {1, 1},
                 {1, -1},
@@ -46,7 +54,7 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
                 {0, 1},
                 {0, -1},
             };
-            size_t dir_idxs[8][2] = {
+            static const size_t dir_idxs[8][2] = {
                 [BISHOP] = {0, 4},
                 [ROOK] = {4, 8},
                 [QUEEN] = {0, 8},
@@ -61,14 +69,14 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
                     if (!yx_is_safe(y + k * dir_y, x + k * dir_x)) {
                         break;
                     }
-                    attacked[dest] = i + 1;
+                    mark_attacked(dest, i);
                     if (!is_piece_null(board->pieces[dest])) {
                         break;
                     }
                 }
             }
         } else if (board->pieces[i].type == KNIGHT) {
-            int dirs[8][2] = {
+            static const int dirs[8][2] = {
                 {1, 2},
                 {1, -2},
                 {-1, 2},
@@ -83,11 +91,11 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
                 int dir_y = dirs[j][1];
                 size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
                 if (yx_is_safe(y + dir_y, x + dir_x)) {
-                    attacked[dest] = i + 1;
+                    mark_attacked(dest, i);
                 }
             }
         } else if (board->pieces[i].type == KING) {
-            int dirs[8][2] = {
+            static const int dirs[8][2] = {
                 {1, 1},
                 {1, -1},
                 {-1, 1},
@@ -102,13 +110,15 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
                 int dir_y = dirs[j][1];
                 size_t dest = YX_TO_IDX(y + dir_y, x + dir_x);
                 if (yx_is_safe(y + dir_y, x + dir_x)) {
-                    attacked[dest] = i + 1;
+                    mark_attacked(dest, i);
                 }
             }
         } else {
             assert(0);
         }
     }
+    board->attacked_evaluated = true;
+#undef set_attacked
 }
 
 size_t king_in_check(Board *board, size_t king_idx) {
@@ -135,7 +145,7 @@ size_t king_in_check(Board *board, size_t king_idx) {
         }
     }
 
-    int dirs[8][2] = {
+    static const int dirs[8][2] = {
         // Bishop, Queen
         {1, 1},
         {1, -1},
@@ -189,7 +199,7 @@ size_t king_in_check(Board *board, size_t king_idx) {
     }
 
     // Knight
-    int knight_dirs[8][2] = {
+    static const int knight_dirs[8][2] = {
         {1, 2},
         {1, -2},
         {-1, 2},
@@ -212,7 +222,7 @@ size_t king_in_check(Board *board, size_t king_idx) {
         }
     }
 
-    int king_dirs[8][2] = {
+    static const int king_dirs[8][2] = {
         {1, 1},
         {1, -1},
         {-1, 1},
@@ -239,11 +249,11 @@ size_t king_in_check(Board *board, size_t king_idx) {
 }
 
 void validate_and_push_move(Board *board, DAi32 *moves, Move move, size_t king_idx) {
-    apply_move(board, move);
+    apply_move_base(board, move, false);
     if (king_in_check(board, king_idx) == 0) {
         dai32_push(moves, move.data);
     }
-    undo_last_move(board);
+    undo_last_move_base(board, false);
 }
 
 void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx) {
@@ -254,7 +264,7 @@ void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
     size_t y = IDX_Y(idx);
     size_t x = IDX_X(idx);
 
-    PieceType possible_promotions[] = {
+    static const PieceType possible_promotions[] = {
         KNIGHT,
         BISHOP,
         ROOK,
@@ -286,7 +296,7 @@ void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
     }
 
     // Capture moves
-    size_t x_dirs[] = {
+    const size_t x_dirs[] = {
         x + 1,
         x - 1,
     };
@@ -336,7 +346,7 @@ void generate_bishop_moves(Board *board, size_t idx, DAi32 *moves, size_t king_i
     size_t y = IDX_Y(idx);
     size_t x = IDX_X(idx);
 
-    int dirs[4][2] = {
+    static const int dirs[4][2] = {
         {1, 1},
         {1, -1},
         {-1, 1},
@@ -371,7 +381,7 @@ void generate_rook_moves(Board *board, size_t idx, DAi32 *moves, size_t king_idx
     size_t y = IDX_Y(idx);
     size_t x = IDX_X(idx);
 
-    int dirs[4][2] = {
+    static const int dirs[4][2] = {
         {1, 0},
         {-1, 0},
         {0, 1},
@@ -406,7 +416,7 @@ void generate_queen_moves(Board *board, size_t idx, DAi32 *moves, size_t king_id
     size_t y = IDX_Y(idx);
     size_t x = IDX_X(idx);
 
-    int dirs[8][2] = {
+    static const int dirs[8][2] = {
         {1, 0},
         {-1, 0},
         {0, 1},
@@ -445,7 +455,7 @@ void generate_knight_moves(Board *board, size_t idx, DAi32 *moves, size_t king_i
     size_t y = IDX_Y(idx);
     size_t x = IDX_X(idx);
 
-    int dirs[8][2] = {
+    static const int dirs[8][2] = {
         {1, 2},
         {1, -2},
         {-1, 2},
@@ -481,11 +491,6 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
     size_t y = IDX_Y(idx);
     size_t x = IDX_X(idx);
 
-    uint8_t attacked[64] = {0};
-    size_t king_idx;
-    generate_attacked(board, piece.color, attacked, &king_idx);
-    assert(king_idx == idx);
-
     // if (board->moves->size == 91) {
     //     DA *da = da_create();
     //     for(size_t i = 0; i < 64; ++i) {
@@ -503,7 +508,7 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
     // }
     
     // Normal & captures
-    int dirs[8][2] = {
+    static const int dirs[8][2] = {
         {1, 0},
         {-1, 0},
         {0, 1},
@@ -520,9 +525,9 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
         if (!yx_is_safe(y + dir_y, x + dir_x)) {
             continue;
         }
-        if (attacked[dest]) {
-            continue;
-        }
+        // if (attacked[dest]) {
+        //     continue;
+        // }
         if (is_piece_null(board->pieces[dest])) {
             Move move = move_create(piece, idx, dest, NORMAL, NONE, NONE);
             validate_and_push_move(board, moves, move, dest);
@@ -535,18 +540,25 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
     }
 
     // Castle
-    if (board->first_king_move[piece.color] == 0) {
-        if (board->first_king_rook_move[piece.color] == 0) {
-            size_t sq_1 = YX_TO_IDX(y, x);
-            size_t sq_2 = YX_TO_IDX(y, x + 1);
-            size_t sq_3 = YX_TO_IDX(y, x + 2);
-			size_t sq_4 = YX_TO_IDX(y, x + 3);
+    bool castling_maybe_available = (board->first_king_move[piece.color] == 0)
+        && ((board->first_king_rook_move[piece.color] == 0) || (board->first_queen_rook_move[piece.color] == 0));
+    if (castling_maybe_available) {
+        uint8_t attacked[64] = {0};
+        size_t king_idx;
+        generate_attacked(board, piece.color, attacked, &king_idx);
+        assert(king_idx == idx);
+        // if (board->first_king_move[piece.color] == 0) { // Always true since 
+        if (board->first_king_rook_move[piece.color] == 0) {       
+            size_t sq_1 = idx;
+            size_t sq_2 = idx + 1;
+            size_t sq_3 = idx + 2;
+            size_t sq_4 = idx + 3;
             Piece rook = board->pieces[sq_4];
             if (rook.color == piece.color 
                 && rook.type == ROOK 
-                && !attacked[sq_1]
-                && !attacked[sq_2]
-                && !attacked[sq_3]
+                && !is_attacked(board, sq_1)
+                && !is_attacked(board, sq_2)
+                && !is_attacked(board, sq_3)
                 && is_piece_null(board->pieces[sq_2])
                 && is_piece_null(board->pieces[sq_3])) {
                 Move move = move_create(piece, idx, sq_3, CASTLE, NONE, NONE);
@@ -554,17 +566,17 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
             }
         }
         if (board->first_queen_rook_move[piece.color] == 0) {
-            size_t sq_1 = YX_TO_IDX(y, x);
-            size_t sq_2 = YX_TO_IDX(y, x - 1);
-            size_t sq_3 = YX_TO_IDX(y, x - 2);
-            size_t sq_4 = YX_TO_IDX(y, x - 3);
-            size_t sq_5 = YX_TO_IDX(y, x - 4);
+            size_t sq_1 = idx;
+            size_t sq_2 = idx - 1;
+            size_t sq_3 = idx - 2;
+            size_t sq_4 = idx - 3;
+            size_t sq_5 = idx - 4;
             Piece rook = board->pieces[sq_5];
             if (rook.color == piece.color
                 && rook.type == ROOK
-                && !attacked[sq_1]
-                && !attacked[sq_2]
-                && !attacked[sq_3]
+                && !is_attacked(board, sq_1)
+                && !is_attacked(board, sq_2)
+                && !is_attacked(board, sq_3)
                 && is_piece_null(board->pieces[sq_2])
                 && is_piece_null(board->pieces[sq_3])
                 && is_piece_null(board->pieces[sq_4])) {
@@ -572,13 +584,20 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
                 validate_and_push_move(board, moves, move, sq_3);
             }
         }
+        // }
     }
 }
 
 void generate_moves(Board *board, DAi32 *moves) {
-    uint8_t attacked[64] = {0};
+    time_t start_time = time_now();
     size_t king_idx;
-    generate_attacked(board, board->to_move, attacked, &king_idx);
+    for (size_t i = 0; i < 64; ++i) {
+        Piece* piece = board->pieces + i;
+        if (piece->type == KING && piece->color == board->to_move) {
+            king_idx = i;
+            break;
+        }
+    }
     for(size_t i = 0; i < 64; ++i) {
         Piece piece = board->pieces[i];
         if (is_piece_null(piece) || piece.type == NONE || piece.color != board->to_move) {
@@ -594,6 +613,8 @@ void generate_moves(Board *board, DAi32 *moves) {
             default: assert(0);
         }
     }
+    time_t end_time = time_now();
+    board->time_to_generate_last_move_us = end_time - start_time;
 }
 
 // ==================================

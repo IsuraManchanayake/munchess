@@ -23,6 +23,7 @@ UCI *uci_create(void) {
     uci->board = board_create();
     uci->last_move = move_data_create(0);
     uci->log_fp = fopen("logs.txt", "a");
+    uci->pid = getpid();
     return uci;
 }
 
@@ -57,7 +58,7 @@ void _uci_log_base(UCI *uci, const char *prefix, const char*fmt, va_list args) {
     char buffer[26];
     curr_time(buffer);
 
-    fprintf(uci->log_fp, "%.2s %ld %s ", prefix, getpid(), buffer);
+    fprintf(uci->log_fp, "%.2s %d %s ", prefix, getpid(), buffer);
     vfprintf(uci->log_fp, fmt, args);
     fprintf(uci->log_fp, "\n");
     fflush(uci->log_fp);
@@ -91,7 +92,7 @@ void send_message(UCI *uci, const char *fmt, ...) {
 }
 
 void log_input(UCI *uci, const char* input) {
-    uci_log(uci, "> ", "%s", input);
+    uci_log(uci, "> ", "%s\n", input);
 }
 
 void send_uci_ok(UCI *uci) {
@@ -167,6 +168,8 @@ void send_best_move(UCI *uci) {
     move_to_uci(move, uci_move_str);
     apply_move(uci->board, move);
     send_message(uci, "bestmove %s", uci_move_str);
+
+    uci_log(uci, "**", "elapsed = %zu us", uci->board->time_to_generate_last_move_us);
 }
 
 void start_uci(void) {
