@@ -130,7 +130,7 @@ bool is_king_in_check_base(Board *board, Color color, size_t *checked_by) {
     size_t king_idx = get_king_idx(board, color);
     int x = IDX_X(king_idx);
     int y = IDX_Y(king_idx);
-    Piece king_piece = board->pieces[king_idx];
+    // Piece king_piece = board->pieces[king_idx];
 
     // Pawn
     int dir = move_direction(color);
