@@ -15,7 +15,6 @@ hall_of_fame_directory_path = project_dir / 'hall-of-fame'
 benchmark_dir = project_dir / 'benchmark'
 
 
-
 def get_engine_choices():
     choices = {
         'latest': str(latest_engine_path),

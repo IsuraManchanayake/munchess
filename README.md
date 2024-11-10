@@ -23,7 +23,7 @@ make
 
 Pre-requisites - CMake >= 3.5, Visual Studio (MSVC or Clang-CL (MSVC CLI)).
 
-(I personally use VSCode's CMake extension to configure and generate Visual Studio project. But, will paste the cmake command it generates.)
+(I personally use VSCode's CMake extension to configure and generate Visual Studio project. But, will paste the cmake command it executes.)
 
 ```ps
 mkdir build
@@ -32,6 +32,16 @@ cmake.EXE -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE --no-warn-unused-cli -S.. -B
 ```
 
 Open `chess.sln` in the `build` folder using Visual Studio and run either `Tests` or `Munchess` project by selecting the corresponding project as the startup project (right-click on the project and select `Set as Startup Project`).
+
+## Play against Munchess!
+
+### [CuteChess](https://github.com/cutechess/cutechess)
+
+Follow `Tools` > `Settings` > `Engines`. Press the `+` icon. Browse the executable and give a working directory you prefer. Munchess's log files will save to that directory. Make sure the protocol is set to `uci`.
+
+### [WinBoard/XBoard](http://hgm.nubati.net/)
+
+Follow `Engine` > `Load First Engine`. Browse the executable and give a working directory you prefer. Munchess's log files will save to that directory. Make sure the `uci` checkbox is ticked.
 
 ## Usage
 

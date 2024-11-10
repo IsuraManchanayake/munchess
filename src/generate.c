@@ -118,7 +118,7 @@ void generate_attacked(Board *board, Color color, uint8_t attacked[64], size_t *
         }
     }
     board->attacked_evaluated = true;
-#undef set_attacked
+#undef mark_attacked
 }
 
 bool _return_king_in_check(size_t *checked_by, size_t idx) {
