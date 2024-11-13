@@ -15,11 +15,12 @@
 #include "utils.h"
 
 char *position_parser = NULL;
+UCI *uci = NULL;
 
 UCI *uci_create(void) {
     UCI *uci = (UCI *) arena_allocate(&arena, sizeof(UCI));
     uci->state = UCI_NOT_READY;
-    uci->engine = engine_create();
+    uci->engine = engine_create(send_info_score_cp);
     uci->board = board_create();
     uci->last_move = move_data_create(0);
     uci->log_fp = fopen("logs.txt", "a");
@@ -54,7 +55,7 @@ void curr_time(char *buffer) {
     strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
-void _uci_log_base(UCI *uci, const char *prefix, const char*fmt, va_list args) {
+void _uci_log_base(const char *prefix, const char*fmt, va_list args) {
     char buffer[26];
     curr_time(buffer);
 
@@ -64,15 +65,15 @@ void _uci_log_base(UCI *uci, const char *prefix, const char*fmt, va_list args) {
     fflush(uci->log_fp);
 }
 
-void uci_log(UCI *uci, const char *prefix, const char *fmt, ...) {
+void uci_log(const char *prefix, const char *fmt, ...) {
     va_list args;
 
     va_start(args, fmt);
-    _uci_log_base(uci, prefix, fmt, args);
+    _uci_log_base(prefix, fmt, args);
     va_end(args);
 }
 
-void send_message(UCI *uci, const char *fmt, ...) {
+void send_message(const char *fmt, ...) {
     va_list args_1;
 
     va_start(args_1, fmt);
@@ -87,35 +88,41 @@ void send_message(UCI *uci, const char *fmt, ...) {
     curr_time(buffer);
 
     va_start(args_2, fmt);
-    _uci_log_base(uci, "< ", fmt, args_2);
+    _uci_log_base("< ", fmt, args_2);
     va_end(args_2);
 }
 
-void log_input(UCI *uci, const char* input) {
-    uci_log(uci, "> ", "%s\n", input);
+void log_input(const char* input) {
+    uci_log("> ", "%s\n", input);
 }
 
-void send_uci_ok(UCI *uci) {
-    send_message(uci, "id name %s", ENGINE_NAME);
-    send_message(uci, "id author %s", ENGINE_AUTHOR);
-    send_message(uci, "uciok");
+void send_uci_ok() {
+    send_message("id name %s", ENGINE_NAME);
+    send_message("id author %s", ENGINE_AUTHOR);
+    send_message("uciok");
 }
 
-void send_is_ready(UCI *uci) {
+void send_is_ready() {
     engine_start(uci->engine);
     if (uci->engine->state == ENGINE_READY) {
         uci->state = UCI_READY;
-        send_message(uci, "readyok");
+        send_message("readyok");
     }
 }
 
-const char *uci_store_board(UCI *uci, const char *fen) {
+void send_info_score_cp(Move move, size_t depth, int64_t cp) {
+    char uci_move_str[6] = { 0 };
+    move_to_uci(move, uci_move_str);
+    send_message("info depth %zu score cp %d pv %s", depth, (int) cp, uci_move_str);
+}
+
+const char *uci_store_board(const char *fen) {
     dai32_free(uci->board->moves);
     board_reset(uci->board);
     return fen_to_board(fen, uci->board);
 }
 
-void parse_position_command(UCI *uci, const char *input) {
+void parse_position_command(const char *input) {
     start_parsing(input);
 
     expect_str("position");
@@ -123,14 +130,14 @@ void parse_position_command(UCI *uci, const char *input) {
 
     if (soft_expect_str("fen")) {
         skip_whitespace();
-        const char *current = uci_store_board(uci, stream);
+        const char *current = uci_store_board(stream);
         advance(current - stream);
     }
     else if (soft_expect_str("startpos")) {
-        uci_store_board(uci, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        uci_store_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
     else {
-        uci_log(uci, "##", "Expected fen or startpos but found %s", input);
+        uci_log("##", "Expected fen or startpos but found %s", input);
         exit(-1);
     }
     skip_whitespace();
@@ -157,30 +164,30 @@ void parse_position_command(UCI *uci, const char *input) {
     }
     DA *da = da_create();
     char *fen = board_to_fen(uci->board, da);
-    uci_log(uci, "**", "fen = %s", fen);
+    uci_log("**", "fen = %s", fen);
     da_free(da);
 }
 
-void send_best_move(UCI *uci) {
+void send_best_move() {
     Move move = engine_best_move(uci->engine, uci->board);
     char uci_move_str[6] = { 0 };
     uci->last_move = move;
     move_to_uci(move, uci_move_str);
     apply_move(uci->board, move);
-    send_message(uci, "bestmove %s", uci_move_str);
+    send_message("bestmove %s", uci_move_str);
 
-    uci_log(uci, "**", "elapsed = %zu us", uci->board->time_to_generate_last_move_us);
+    uci_log("**", "elapsed = %zu us", uci->board->time_to_generate_last_move_us);
 }
 
 void start_uci(void) {
-    UCI *uci = uci_create();
+    uci = uci_create();
 
     char *input;
     while (true) {
         if ((input = read_line(stdin)) == NULL) {
             break;
         }
-        log_input(uci, input);
+        log_input(input);
 
         if (match_cmd(input, "uci")) {
             send_uci_ok(uci);
@@ -189,13 +196,13 @@ void start_uci(void) {
         } else if (match_cmd(input, "ucinewgame")) {
             continue;
         } else if (match_cmd(input, "position")) {
-            parse_position_command(uci, input);
+            parse_position_command(input);
         } else if (match_cmd(input, "go")) {
             send_best_move(uci);
         } else if (match_cmd(input, "stop")) {
             char uci_move_str[6] = {0};
             move_to_uci(uci->last_move, uci_move_str);
-            send_message(uci, "bestmove %s", uci_move_str);
+            send_message("bestmove %s", uci_move_str);
             // When mult-threading, send the current best move.
             continue;
         } else if (match_cmd(input, "quit")) {
@@ -204,6 +211,6 @@ void start_uci(void) {
         fflush(stdout);
         free(input);
     }
-    send_message(uci, "Exiting.");
+    send_message("Exiting.");
     fclose(uci->log_fp);
 }

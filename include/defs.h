@@ -1,4 +1,4 @@
-#define ENGINE_NAME "Munchess 0.2"
+#define ENGINE_NAME "Munchess 0.3-alpha"
 #define ENGINE_AUTHOR "Isura"
 
 #define simple(c) ((char)((c) | 32))
@@ -54,6 +54,7 @@
 #endif
 
 #define debugzu(x) (printf("%s = %zu\n", #x, (x)))
+#define debugll(x) (printf("%s = %lld\n", #x, (x)))
 #define debugi(x) (printf("%s = %d\n", #x, (x)))
 #define debugc(x) (printf("%s = %c\n", #x, (x)))
 #define debugs(x) (printf("%s = %s\n", #x, (x)))

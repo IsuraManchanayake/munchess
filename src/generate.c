@@ -260,16 +260,19 @@ bool is_king_in_check(Board *board) {
     return is_king_in_check_base(board, board->to_move, &checked_by);
 }
 
-void validate_and_push_move(Board *board, DAi32 *moves, Move move) {
+bool validate_and_push_move(Board *board, DAi32 *moves, Move move) {
+    bool is_valid = false;
     apply_move_base(board, move, false);
     size_t _checked_by = 0;
     if (!is_king_in_check_base(board, move.piece_color, &_checked_by)) {
         dai32_push(moves, move.data);
+        is_valid = true;
     }
     undo_last_move_base(board, false);
+    return is_valid;
 }
 
-void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves) {
+bool generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
     Piece piece = board->pieces[idx];
     assert(piece.type == PAWN);
 
@@ -352,7 +355,7 @@ void generate_pawn_moves(Board *board, size_t idx, DAi32 *moves) {
     }
 }
 
-void generate_bishop_moves(Board *board, size_t idx, DAi32 *moves) {
+bool generate_bishop_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
     Piece piece = board->pieces[idx];
     assert(piece.type == BISHOP);
 
@@ -387,7 +390,7 @@ void generate_bishop_moves(Board *board, size_t idx, DAi32 *moves) {
     }
 }
 
-void generate_rook_moves(Board *board, size_t idx, DAi32 *moves) {
+bool generate_rook_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
     Piece piece = board->pieces[idx];
     assert(piece.type == ROOK);
 
@@ -422,7 +425,7 @@ void generate_rook_moves(Board *board, size_t idx, DAi32 *moves) {
     }
 }
 
-void generate_queen_moves(Board *board, size_t idx, DAi32 *moves) {
+bool generate_queen_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
     Piece piece = board->pieces[idx];
     assert(piece.type == QUEEN);
 
@@ -461,7 +464,7 @@ void generate_queen_moves(Board *board, size_t idx, DAi32 *moves) {
     }
 }
 
-void generate_knight_moves(Board *board, size_t idx, DAi32 *moves) {
+bool generate_knight_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
     Piece piece = board->pieces[idx];
     assert(piece.type == KNIGHT);
 
@@ -497,7 +500,7 @@ void generate_knight_moves(Board *board, size_t idx, DAi32 *moves) {
     }
 }
 
-void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
+bool generate_king_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
     Piece piece = board->pieces[idx];
     assert(piece.type == KING);
 
@@ -603,18 +606,18 @@ void generate_king_moves(Board *board, size_t idx, DAi32 *moves) {
 
 void generate_moves(Board *board, DAi32 *moves) {
     time_t start_time = time_now();
-    for(size_t i = 0; i < 64; ++i) {
+    for (size_t i = 0; i < 64; ++i) {
         Piece piece = board->pieces[i];
         if (is_piece_null(piece) || piece.color != board->to_move) {
             continue;
         }
         switch (piece.type) {
-            case PAWN:   generate_pawn_moves(board, i, moves); break;
-            case BISHOP: generate_bishop_moves(board, i, moves); break;
-            case ROOK:   generate_rook_moves(board, i, moves); break;
-            case QUEEN:  generate_queen_moves(board, i, moves); break;
-            case KNIGHT: generate_knight_moves(board, i, moves); break;
-            case KING:   generate_king_moves(board, i, moves); break;
+            case PAWN:   generate_pawn_moves(board, i, moves, false); break;
+            case BISHOP: generate_bishop_moves(board, i, moves, false); break;
+            case ROOK:   generate_rook_moves(board, i, moves, false); break;
+            case QUEEN:  generate_queen_moves(board, i, moves, false); break;
+            case KNIGHT: generate_knight_moves(board, i, moves, false); break;
+            case KING:   generate_king_moves(board, i, moves, false); break;
             default: assert(0);
         }
     }

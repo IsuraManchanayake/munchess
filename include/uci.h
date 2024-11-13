@@ -24,10 +24,9 @@ typedef struct UCI {
 } UCI;
 
 extern char *position_parser;
+extern UCI *uci;
 
 UCI *uci_create(void);
-
-void update_uci_state(void);
 
 void move_to_uci(Move move, char *uci);
 
@@ -37,18 +36,20 @@ bool match_cmd(char *input, const char *cmd);
 
 void curr_time(char *buffer);
 
-void uci_log(UCI *uci, const char *prefix, const char *fmt, ...);
+void uci_log(const char *prefix, const char *fmt, ...);
 
-void send_message(UCI *uci, const char *fmt, ...);
+void send_message(const char *fmt, ...);
 
-void send_uci_ok(UCI *uci);
+void send_uci_ok();
 
-void send_is_ready(UCI *uci);
+void send_is_ready();
 
-const char *uci_store_board(UCI *uci, const char *fen);
+void send_info_score_cp(int64_t cp);
 
-void parse_position_command(UCI *uci, const char *input);
+const char *uci_store_board(const char *fen);
 
-void send_best_move(UCI *uci);
+void parse_position_command(const char *input);
+
+void send_best_move();
 
 void start_uci(void);

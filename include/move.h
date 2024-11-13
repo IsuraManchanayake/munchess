@@ -43,6 +43,8 @@ char *move_buf_write(Move move, DA *da);
 
 void print_move(Move move);
 
+void println_move(Move move);
+
 // ============================================
 
 void test_move_size(void);
