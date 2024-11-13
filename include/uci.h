@@ -44,7 +44,7 @@ void send_uci_ok();
 
 void send_is_ready();
 
-void send_info_score_cp(int64_t cp);
+void send_info_score_cp(Move move, size_t depth, int64_t cp);
 
 const char *uci_store_board(const char *fen);
 

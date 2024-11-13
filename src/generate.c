@@ -273,6 +273,7 @@ bool validate_and_push_move(Board *board, DAi32 *moves, Move move) {
 }
 
 bool generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
+    (void) return_on_found;
     Piece piece = board->pieces[idx];
     assert(piece.type == PAWN);
 
@@ -353,9 +354,11 @@ bool generate_pawn_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_
             }
         }
     }
+    return false;
 }
 
 bool generate_bishop_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
+    (void) return_on_found;
     Piece piece = board->pieces[idx];
     assert(piece.type == BISHOP);
 
@@ -388,9 +391,11 @@ bool generate_bishop_moves(Board *board, size_t idx, DAi32 *moves, bool return_o
             }
         }
     }
+    return false;
 }
 
 bool generate_rook_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
+    (void) return_on_found;
     Piece piece = board->pieces[idx];
     assert(piece.type == ROOK);
 
@@ -423,9 +428,11 @@ bool generate_rook_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_
             }
         }
     }
+    return false;
 }
 
 bool generate_queen_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
+    (void) return_on_found;
     Piece piece = board->pieces[idx];
     assert(piece.type == QUEEN);
 
@@ -462,9 +469,11 @@ bool generate_queen_moves(Board *board, size_t idx, DAi32 *moves, bool return_on
             }
         }
     }
+    return false;
 }
 
 bool generate_knight_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
+    (void) return_on_found;
     Piece piece = board->pieces[idx];
     assert(piece.type == KNIGHT);
 
@@ -498,9 +507,11 @@ bool generate_knight_moves(Board *board, size_t idx, DAi32 *moves, bool return_o
             }
         }
     }
+    return false;
 }
 
 bool generate_king_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_found) {
+    (void) return_on_found;
     Piece piece = board->pieces[idx];
     assert(piece.type == KING);
 
@@ -602,6 +613,7 @@ bool generate_king_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_
         }
         // }
     }
+    return false;
 }
 
 void generate_moves(Board *board, DAi32 *moves) {

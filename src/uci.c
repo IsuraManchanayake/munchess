@@ -190,15 +190,15 @@ void start_uci(void) {
         log_input(input);
 
         if (match_cmd(input, "uci")) {
-            send_uci_ok(uci);
+            send_uci_ok();
         } else if (match_cmd(input, "isready")) {
-            send_is_ready(uci);
+            send_is_ready();
         } else if (match_cmd(input, "ucinewgame")) {
             continue;
         } else if (match_cmd(input, "position")) {
             parse_position_command(input);
         } else if (match_cmd(input, "go")) {
-            send_best_move(uci);
+            send_best_move();
         } else if (match_cmd(input, "stop")) {
             char uci_move_str[6] = {0};
             move_to_uci(uci->last_move, uci_move_str);
