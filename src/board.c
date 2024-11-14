@@ -1,6 +1,11 @@
 #include <assert.h>
 #include <string.h>
 
+#if _WIN32
+#include <intrin.h>
+#pragma intrinsic(_mm_popcnt_u64)
+#endif
+
 #include "board.h"
 #include "common.h"
 #include "defs.h"
@@ -28,6 +33,8 @@ void clear_square(Board *board, size_t idx) {
     if (board->pieces[idx].type == KING) {
         board->king_bb[board->pieces[idx].color] &= ~(1ULL << idx);
     }
+    Piece piece = board->pieces[idx];
+    board->bb[piece.type][piece.color] &= ~(1ULL << idx);
     board->pieces[idx].data = 0;
 }
 
@@ -35,6 +42,7 @@ void set_piece_with(Board *board, size_t idx, Color color, PieceType type) {
     if (type == KING) {
         board->king_bb[color] = 1ULL << idx;
     }
+    board->bb[type][color] |= 1ULL << idx;
     board->pieces[idx].data = 0;
     board->pieces[idx].color = color;
     board->pieces[idx].type = type;
@@ -64,6 +72,12 @@ void board_reset(Board *board) {
     board->half_move_counter = 0;
     board->king_bb[WHITE] = 0;
     board->king_bb[BLACK] = 0;
+
+    for (size_t i = 0; i < 6; ++i) {
+        for (size_t j = 0; j < 2; ++j) {
+            board->bb[i][j] = 0;
+        }
+    }
 
     board->time_to_generate_last_move_us = 0;
     board->attacked = 0;
@@ -120,6 +134,15 @@ size_t get_king_idx(Board *board, Color color) {
     return index;
 #else
     return __builtin_ctzll(board->king_bb[color]);
+#endif
+}
+
+size_t count_pieces(Board *board, PieceType type, Color color) {
+    uint64_t bb = board->bb[type][color];
+#if _WIN32
+    return _mm_popcnt_u64(bb);
+#else
+    return __builtin_popcountll(bb);
 #endif
 }
 
@@ -240,7 +263,7 @@ void undo_last_move_base(Board *board, bool invalidate_attacked) {
         // unsigned from_y = IDX_Y(move.from);
         size_t to_y = IDX_Y(move.to);
         size_t to_x = IDX_X(move.to);
-        ATyx(board, to_y - dir, to_x) = piece_create(op_color(color), PAWN);
+        set_piece_with(board, YX_TO_IDX(to_y - dir, to_x), op_color(color), PAWN);
     }
     set_piece_with(board, move.from, color, move.piece_type);
     if (move_is_type_of(move, CAPTURE)) {
@@ -753,6 +776,19 @@ void test_board_initial(void) {
     assert(ATcoord(board, "E8").type == KING);
     assert(ATcoord(board, "E8").color == BLACK);
     assert(is_piece_null(ATcoord(board, "C6")));
+    
+    assert(count_pieces(board, PAWN, WHITE) == 8);
+    assert(count_pieces(board, PAWN, BLACK) == 8);
+    assert(count_pieces(board, BISHOP, WHITE) == 2);
+    assert(count_pieces(board, BISHOP, BLACK) == 2);
+    assert(count_pieces(board, KNIGHT, WHITE) == 2);
+    assert(count_pieces(board, KNIGHT, BLACK) == 2);
+    assert(count_pieces(board, ROOK, WHITE) == 2);
+    assert(count_pieces(board, ROOK, BLACK) == 2);
+    assert(count_pieces(board, QUEEN, WHITE) == 1);
+    assert(count_pieces(board, QUEEN, BLACK) == 1);
+    assert(count_pieces(board, KING, WHITE) == 1);
+    assert(count_pieces(board, KING, BLACK) == 1);
 }
 
 void test_board_display(void) {
@@ -924,6 +960,19 @@ void test_fen_to_board(void) {
     }
 
     da_free(fens_da);
+    
+    assert(count_pieces(board, PAWN, WHITE) == 8);
+    assert(count_pieces(board, PAWN, BLACK) == 8);
+    assert(count_pieces(board, BISHOP, WHITE) == 2);
+    assert(count_pieces(board, BISHOP, BLACK) == 2);
+    assert(count_pieces(board, KNIGHT, WHITE) == 2);
+    assert(count_pieces(board, KNIGHT, BLACK) == 2);
+    assert(count_pieces(board, ROOK, WHITE) == 2);
+    assert(count_pieces(board, ROOK, BLACK) == 2);
+    assert(count_pieces(board, QUEEN, WHITE) == 1);
+    assert(count_pieces(board, QUEEN, BLACK) == 1);
+    assert(count_pieces(board, KING, WHITE) == 1);
+    assert(count_pieces(board, KING, BLACK) == 1);
 }
 
 void test_san_notation_to_move(void) {

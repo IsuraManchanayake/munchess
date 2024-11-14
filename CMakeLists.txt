@@ -12,6 +12,7 @@ include_directories(${chess_SOURCE_DIR}/include)
 add_library(chess_lib STATIC
     src/board.c
     src/common.c
+    src/constants.c
     src/engine.c
     src/generate.c
     src/move.c
@@ -26,6 +27,7 @@ add_library(chess_lib STATIC
 set(HEADER_FILES
     include/board.h
     include/common.h
+    include/constants.h
     include/engine.h
     include/defs.h
     include/generate.h

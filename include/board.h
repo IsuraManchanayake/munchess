@@ -17,6 +17,8 @@ typedef struct Board {
     Color to_move;
     uint64_t king_bb[2];
 
+    uint64_t bb[6][2];
+
     uint64_t attacked;
     bool attacked_evaluated;
 
@@ -46,6 +48,8 @@ void set_attacked(Board *board, size_t idx);
 void place_initial_pieces(Board *board);
 
 size_t get_king_idx(Board *board, Color color);
+
+size_t count_pieces(Board *board, PieceType type, Color color);
 
 int move_direction(Color color);
 

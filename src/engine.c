@@ -11,6 +11,7 @@
 #include "piece.h"
 #include "tests.h"
 #include "utils.h"
+#include "constants.h"
 
 #define NEG_INF -10000000LL
 #define POS_INF 10000000LL
@@ -84,8 +85,8 @@ void sort_moves(DAi32 *moves) {
 int64_t evaluate_board(Engine *engine, size_t n_moves) {
 	static const int64_t piece_vals[] = {
 		[PAWN] = 100LL,
-		[KNIGHT] = 300LL,
-		[BISHOP] = 350LL,
+		[KNIGHT] = 320LL,
+		[BISHOP] = 330LL,
 		[ROOK] = 500LL,
 		[QUEEN] = 900LL,
 		[KING] = 0LL,
@@ -111,8 +112,41 @@ int64_t evaluate_board(Engine *engine, size_t n_moves) {
 	for (size_t i = 0; i < 64; ++i) {
 		Piece *piece = engine->board->pieces + i;
 		int fac = (piece->data != 0) * (2  * (piece->color == engine->board->to_move) - 1);
-		eval += fac * piece_vals[piece->type];
+		eval += fac * (piece_vals[piece->type] + piece_val_offsets[piece->type][piece->color][i]);
 	}
+    
+    bool end_game = false;
+    if (engine->board->bb[QUEEN][WHITE] == 0 && engine->board->bb[QUEEN][BLACK] == 0) {
+        end_game = true;
+    } else {
+        if (engine->board->bb[QUEEN][WHITE] > 0 
+                && count_pieces(engine->board, ROOK, WHITE) 
+                    + count_pieces(engine->board, BISHOP, WHITE) 
+                    + count_pieces(engine->board, KNIGHT, WHITE) == 1) {
+            end_game = true;
+        }
+        if (engine->board->bb[QUEEN][BLACK] > 0 
+                && count_pieces(engine->board, ROOK, BLACK) 
+                    + count_pieces(engine->board, BISHOP, BLACK) 
+                    + count_pieces(engine->board, KNIGHT, BLACK) == 1) {
+            end_game = true;
+        }
+    }
+    if (end_game) {
+        int fac = 0;
+        size_t king_idx = 0;
+
+        // WHITE
+        fac = 2 * (WHITE == engine->board->to_move) - 1;
+        king_idx = get_king_idx(engine->board, WHITE);
+        eval += fac * end_game_king_val_offsets[WHITE][king_idx];
+
+        // BLACK
+        fac = 2 * (BLACK == engine->board->to_move) - 1;
+        king_idx = get_king_idx(engine->board, BLACK);
+        eval += fac * end_game_king_val_offsets[BLACK][king_idx];
+    }
+
 	return eval;
 }
 
