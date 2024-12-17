@@ -75,6 +75,8 @@ char *board_buf_write(Board *board, DA *da);
 
 void print_board(Board *board);
 
+void print_bb(Board *board, PieceType type, Color color);
+
 void print_fen(Board* board);
 
 // ===========================================

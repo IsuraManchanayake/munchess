@@ -102,17 +102,23 @@ DAi32 *dai32_create(void) {
 //     da->size = 0;
 // }
 
+// 230
+
 void da_free(DA *da) {
     if (da->data) {
         free(da->data);
+        da->data = NULL;
     }
+    da->size = 0;
     // free(da);
 }
 
 void dai32_free(DAi32 *da) {
     if (da->data) {
         free(da->data);
+        da->data = NULL;
     }
+    da->size = 0;
     // free(da);
 }
 

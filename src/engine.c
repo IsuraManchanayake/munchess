@@ -197,7 +197,7 @@ Move engine_best_move(Engine *engine, Board *board) {
     int64_t alpha = NEG_INF;
 	int64_t beta = POS_INF;
     
-    size_t depth = 4;
+    size_t depth = 5;
     
     for (size_t i = 0; i < engine->moves->size; ++i) {
         Move move = move_data_create(engine->moves->data[i]);
@@ -221,6 +221,11 @@ Move engine_best_move(Engine *engine, Board *board) {
         size_t random_move_idx = rand_lim(best_moves->size);
         best_move = move_data_create(best_moves->data[random_move_idx]);
     }
+    
+    for (size_t i = 0; i < best_moves->size; ++i) {
+        Move move = move_data_create(best_moves->data[i]);
+        print_move(move);
+    }
 
     if (engine->on_score != NULL) {
         engine->on_score(best_move, depth, best_eval);
@@ -234,16 +239,18 @@ Move engine_best_move(Engine *engine, Board *board) {
 // ================================
 
 void test_move_sequence(void) {
-    const char *fen = "3rr1k1/1bq2p1p/p5p1/6Pn/2pQ2N1/3BR2P/5P2/6K1 w - - 0 28";
+    const char *fen = "8/8/8/2k5/7r/8/6K1/8 b - - 37 108";
+     //const char *fen = "3rr1k1/1bq2p1p/p5p1/6Pn/2pQ2N1/3BR2P/5P2/6K1 w - - 0 28";
     Board *board = board_create();
     (void) fen_to_board(fen, board);
 
     Engine *engine = engine_create(NULL);
     engine_start(engine);
     time_t start = time_now();
-    engine_best_move(engine, board);
+    Move move = engine_best_move(engine, board);
     time_t end = time_now();
     printf("%f ms\n", (end - start) / 1000.0);
+    print_move(move);
     (void) end;
     (void) start;
 }

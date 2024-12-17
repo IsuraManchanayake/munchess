@@ -42,6 +42,7 @@ void set_piece_with(Board *board, size_t idx, Color color, PieceType type) {
     if (type == KING) {
         board->king_bb[color] = 1ULL << idx;
     }
+    clear_square(board, idx);
     board->bb[type][color] |= 1ULL << idx;
     board->pieces[idx].data = 0;
     board->pieces[idx].color = color;
@@ -56,6 +57,7 @@ void board_reset(Board *board) {
     for (size_t i = 0; i < 64; ++i) {
         clear_square(board, i);
     }
+    dai32_free(board->moves);
     board->moves = dai32_create();
     board->first_king_move[WHITE] = 0;
     board->first_king_move[BLACK] = 0;
@@ -73,7 +75,7 @@ void board_reset(Board *board) {
     board->king_bb[WHITE] = 0;
     board->king_bb[BLACK] = 0;
 
-    for (size_t i = 0; i < 6; ++i) {
+    for (size_t i = 0; i < sizeof(board->bb) / sizeof(*board->bb); ++i) {
         for (size_t j = 0; j < 2; ++j) {
             board->bb[i][j] = 0;
         }
@@ -86,6 +88,7 @@ void board_reset(Board *board) {
 
 Board *board_create(void) {
     Board *board = (Board *) arena_allocate(&arena, sizeof(Board));
+    board->moves = dai32_create();
     board_reset(board);
     return board;
 }
@@ -343,7 +346,7 @@ void undo_last_move(Board *board) {
 
 size_t n_moves_since_last_pawn_or_capture_move(Board *board) {
     size_t last_pawn_move = max(board->last_pawn_move[WHITE], board->last_pawn_move[BLACK]);
-    size_t last_capture_move = max(board->last_capture_move[WHITE], board->last_capture_move[WHITE]);
+    size_t last_capture_move = max(board->last_capture_move[WHITE], board->last_capture_move[BLACK]);
     size_t last_pawn_or_capture_move = max(last_pawn_move, last_capture_move);
     size_t moves_since_last_pawn_or_capture_move = board->half_move_counter - last_pawn_or_capture_move;
     return moves_since_last_pawn_or_capture_move;
@@ -425,7 +428,7 @@ char *board_to_fen(Board *board, DA *da) {
 }
 
 const char *fen_to_board(const char *fen, Board *board) {
-    board->moves->size = 0;
+    board_reset(board);
     size_t idx = 0;
     while (*fen) {
         if ('1' <= *fen && *fen <= '8') {
@@ -755,6 +758,20 @@ void print_board(Board *board) {
     char *board_str = board_buf_write(board, da);
     printf("%s\n", board_str);
     da_free(da);
+}
+
+void print_bb(Board *board, PieceType type, Color color) {
+    uint64_t bb = type == KING ? board->king_bb[color] : board->bb[type][color];
+    for (size_t i = 0; i < 64; ++i) {
+        size_t y = IDX_Y(i);
+        size_t x = IDX_X(i);
+        uint8_t pos = YX_TO_IDX(7 - y, x);
+        uint8_t bit = (bb >> pos) & 1;
+        char c = bit ? piece_repr_base(color, type) : '-';
+        char e = (x == 7 ? '\n' : ' ');
+        printf("%c%c", c, e);
+    }
+    printf("\n");
 }
 
 void print_fen(Board* board) {

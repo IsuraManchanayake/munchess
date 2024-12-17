@@ -73,6 +73,17 @@ void error_exit(int status) {
     exit(status);
 }
 
+uint8_t next_piece_idx(uint64_t bb) {
+#if _WIN32
+    unsigned long index;
+    unsigned char non_zero = _BitScanForward64(&index, bb);
+    assert(non_zero > 0);
+    return index;
+#else
+    return __builtin_ctzll(bb);
+#endif
+}
+
 char *read_line(FILE *fp) {
     char *buffer = NULL;
     size_t buffer_size = 0;

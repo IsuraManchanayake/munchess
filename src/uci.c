@@ -154,6 +154,7 @@ void parse_position_command(const char *input) {
             memcpy(uci_move_str, start, stream - start);
 
             Move move = uci_notation_to_move(uci_move_str, uci->board);
+            print_move(move);
             apply_move(uci->board, move);
 
             skip_whitespace();
@@ -164,6 +165,8 @@ void parse_position_command(const char *input) {
     }
     DA *da = da_create();
     char *fen = board_to_fen(uci->board, da);
+    printf("\n");
+    debugs(fen);
     uci_log("**", "fen = %s", fen);
     da_free(da);
 }

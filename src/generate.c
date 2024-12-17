@@ -618,21 +618,94 @@ bool generate_king_moves(Board *board, size_t idx, DAi32 *moves, bool return_on_
 
 void generate_moves(Board *board, DAi32 *moves) {
     time_t start_time = time_now();
-    for (size_t i = 0; i < 64; ++i) {
-        Piece piece = board->pieces[i];
-        if (is_piece_null(piece) || piece.color != board->to_move) {
-            continue;
-        }
-        switch (piece.type) {
-            case PAWN:   generate_pawn_moves(board, i, moves, false); break;
-            case BISHOP: generate_bishop_moves(board, i, moves, false); break;
-            case ROOK:   generate_rook_moves(board, i, moves, false); break;
-            case QUEEN:  generate_queen_moves(board, i, moves, false); break;
-            case KNIGHT: generate_knight_moves(board, i, moves, false); break;
-            case KING:   generate_king_moves(board, i, moves, false); break;
-            default: assert(0);
+
+#if 1
+    bool (*gen_funcs[6])(Board *, size_t, DAi32 *, bool) = {
+        [PAWN] = generate_pawn_moves,
+        [BISHOP] = generate_bishop_moves,
+        [KNIGHT] = generate_knight_moves,
+        [ROOK] = generate_rook_moves,
+        [QUEEN] = generate_queen_moves,
+    };
+    PieceType piece_types[] = {
+        PAWN,
+        BISHOP,
+        KNIGHT,
+        ROOK,
+        QUEEN
+    };
+
+    for (size_t i = 0; i < sizeof(piece_types) / sizeof(*piece_types); ++i) {
+        PieceType piece_type = piece_types[i];
+        
+        uint64_t piece_bb = board->bb[piece_type][board->to_move];
+        uint8_t piece_idx = 0;
+        while (piece_bb) {
+            uint8_t piece_idx_offset = next_piece_idx(piece_bb);
+            piece_idx += piece_idx_offset;
+            gen_funcs[piece_type](board, piece_idx, moves, false);
+            piece_bb >>= piece_idx_offset + 1;
+            piece_bb &= -(64ULL > (piece_idx_offset + 1));
+            ++piece_idx;
         }
     }
+#else   
+    uint64_t pawn_bb = board->bb[PAWN][board->to_move];
+    uint8_t pawn_idx = 0;
+    while (pawn_bb) {
+        uint8_t pawn_idx_offset = next_piece_idx(pawn_bb);
+        pawn_idx += pawn_idx_offset;
+        generate_pawn_moves(board, pawn_idx, moves, false);
+        pawn_bb >>= pawn_idx_offset + 1;
+        pawn_bb &= -(63ULL > pawn_idx_offset);
+        ++pawn_idx;
+    }
+    uint64_t bishop_bb = board->bb[BISHOP][board->to_move];
+    uint8_t bishop_idx = 0;
+    while (bishop_bb) {
+        uint8_t bishop_idx_offset = next_piece_idx(bishop_bb);
+        bishop_idx += bishop_idx_offset;
+        generate_bishop_moves(board, bishop_idx, moves, false);
+        bishop_bb >>= bishop_idx_offset + 1;
+        bishop_bb &= -(63ULL > bishop_idx_offset);
+        ++bishop_idx;
+    }
+    uint64_t knight_bb = board->bb[KNIGHT][board->to_move];
+    uint8_t knight_idx = 0;
+    while (knight_bb) {
+        uint8_t knight_idx_offset = next_piece_idx(knight_bb);
+        knight_idx += knight_idx_offset;
+        generate_knight_moves(board, knight_idx, moves, false);
+        knight_bb >>= knight_idx_offset + 1;
+        knight_bb &= -(63ULL > knight_idx_offset);
+        ++knight_idx;
+    }
+    uint64_t rook_bb = board->bb[ROOK][board->to_move];
+    uint8_t rook_idx = 0;
+    while (rook_bb) {
+        uint8_t rook_idx_offset = next_piece_idx(rook_bb);
+        rook_idx += rook_idx_offset;
+        generate_rook_moves(board, rook_idx, moves, false);
+        rook_bb >>= rook_idx_offset + 1ULL;
+        rook_bb &= -(63ULL > rook_idx_offset);
+        ++rook_idx;
+    }
+    uint64_t queen_bb = board->bb[QUEEN][board->to_move];
+    uint8_t queen_idx = 0;
+    while (queen_bb) {
+        uint8_t queen_idx_offset = next_piece_idx(queen_bb);
+        queen_idx += queen_idx_offset;
+        generate_queen_moves(board, queen_idx, moves, false);
+        queen_bb >>= queen_idx_offset + 1;
+        queen_bb &= -(63ULL > queen_idx_offset);
+        ++queen_idx;
+    }
+#endif
+
+    uint64_t king_bb = board->king_bb[board->to_move];
+    uint8_t king_idx = next_piece_idx(king_bb);
+    generate_king_moves(board, king_idx, moves, false);
+
     time_t end_time = time_now();
     board->time_to_generate_last_move_us = end_time - start_time;
 }

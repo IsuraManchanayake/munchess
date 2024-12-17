@@ -1,6 +1,6 @@
 #include "piece.h"
 
-extern int piece_val_offsets[8][2][64] = {
+int piece_val_offsets[8][2][64] = {
     [NONE] = {0},
     [PAWN] = {
         [WHITE] = {
